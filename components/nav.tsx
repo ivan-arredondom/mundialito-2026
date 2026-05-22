@@ -9,6 +9,7 @@ const links = [
   { href: '/schedule', label: 'Schedule' },
   { href: '/results', label: 'Results' },
   { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/prizes', label: 'Prizes' },
 ]
 
 export default function Nav() {

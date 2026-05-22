@@ -12,6 +12,7 @@ interface Group {
   code: string
   max_brackets_per_user: number | null
   max_members: number | null
+  platform_fee_pct: number
 }
 
 interface Member {
@@ -139,7 +140,7 @@ export default function AdminClient({
     flash('Group deleted')
   }
 
-  async function patchGroup(id: number, patch: { max_brackets_per_user?: number | null; max_members?: number | null }) {
+  async function patchGroup(id: number, patch: { max_brackets_per_user?: number | null; max_members?: number | null; platform_fee_pct?: number }) {
     const res = await fetch('/api/admin/groups', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -278,7 +279,7 @@ export default function AdminClient({
                     </button>
                   </div>
                 </div>
-                <div className="flex gap-6">
+                <div className="flex flex-wrap gap-4">
                   <label className="flex items-center gap-2 text-xs text-gray-600">
                     Max brackets/user
                     <input
@@ -311,6 +312,23 @@ export default function AdminClient({
                       className="w-16 border border-gray-300 rounded px-2 py-1 text-center text-sm"
                     />
                     <span className="text-gray-400">(blank = unlimited)</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-gray-600">
+                    Platform fee %
+                    <input
+                      type="number"
+                      min={0}
+                      max={10}
+                      step={0.5}
+                      value={g.platform_fee_pct ?? 5}
+                      onChange={e => setGroups(gs => gs.map(x => x.id === g.id
+                        ? { ...x, platform_fee_pct: +e.target.value }
+                        : x
+                      ))}
+                      onBlur={() => patchGroup(g.id, { platform_fee_pct: g.platform_fee_pct })}
+                      className="w-16 border border-gray-300 rounded px-2 py-1 text-center text-sm"
+                    />
+                    <span className="text-gray-400">(max 10%)</span>
                   </label>
                 </div>
               </div>

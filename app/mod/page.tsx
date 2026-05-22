@@ -9,6 +9,10 @@ interface Group {
   code: string
   max_brackets_per_user: number | null
   max_members: number | null
+  entry_fee: number
+  fee_per: 'person' | 'bracket'
+  platform_fee_pct: number
+  prize_splits: { place: number; pct: number }[]
 }
 
 export default async function ModPage() {
@@ -29,13 +33,13 @@ export default async function ModPage() {
   if (isPrivileged) {
     const { data } = await createAdminClient()
       .from('groups')
-      .select('id, name, code, max_brackets_per_user, max_members')
+      .select('id, name, code, max_brackets_per_user, max_members, entry_fee, fee_per, platform_fee_pct, prize_splits')
       .order('name')
     groups = (data ?? []) as Group[]
   } else {
     const { data: memberships } = await supabase
       .from('group_memberships')
-      .select('role, groups(id, name, code, max_brackets_per_user, max_members)')
+      .select('role, groups(id, name, code, max_brackets_per_user, max_members, entry_fee, fee_per, platform_fee_pct, prize_splits)')
       .eq('user_id', user.id)
       .eq('role', 'mod')
     if (!memberships?.length) redirect('/')
