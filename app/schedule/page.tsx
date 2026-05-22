@@ -45,7 +45,7 @@ export default async function SchedulePage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-black mb-10">Schedule</h1>
+      <h1 className="text-2xl md:text-3xl font-black mb-8 md:mb-10">Schedule</h1>
       {stageOrder.map((stage) => {
         const stageMatches = byStage[stage]
         if (!stageMatches?.length) return null
@@ -67,27 +67,32 @@ export default async function SchedulePage() {
 }
 
 function MatchRow({ m }: { m: MatchRow }) {
+  const badge = (
+    <span
+      className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+        m.status === 'FINISHED'
+          ? 'bg-gray-100 text-gray-500'
+          : m.status === 'IN_PLAY'
+          ? 'bg-green-100 text-green-700'
+          : 'bg-blue-50 text-blue-500'
+      }`}
+    >
+      {m.status === 'FINISHED' ? 'FT' : m.status === 'IN_PLAY' ? 'LIVE' : 'Sched.'}
+    </span>
+  )
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-gray-50 text-sm">
-      <span className="text-gray-400 text-xs w-44 shrink-0">
+    <div className="py-2 border-b border-gray-50 text-sm">
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-right font-medium truncate">{m.home_team?.name ?? 'TBD'}</span>
+        <span className="text-gray-700 font-bold shrink-0 w-12 text-center text-xs">
+          {m.status === 'FINISHED' ? `${m.home_score}–${m.away_score}` : 'vs'}
+        </span>
+        <span className="flex-1 font-medium truncate">{m.away_team?.name ?? 'TBD'}</span>
+        {badge}
+      </div>
+      <p className="text-gray-400 text-xs mt-0.5 text-center">
         <LocalTime utc={m.kickoff_at} />
-      </span>
-      <span className="flex-1 text-right font-medium">{m.home_team?.name ?? 'TBD'}</span>
-      <span className="text-gray-700 font-bold shrink-0 w-16 text-center">
-        {m.status === 'FINISHED' ? `${m.home_score} – ${m.away_score}` : 'vs'}
-      </span>
-      <span className="flex-1 font-medium">{m.away_team?.name ?? 'TBD'}</span>
-      <span
-        className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
-          m.status === 'FINISHED'
-            ? 'bg-gray-100 text-gray-500'
-            : m.status === 'IN_PLAY'
-            ? 'bg-green-100 text-green-700'
-            : 'bg-blue-50 text-blue-500'
-        }`}
-      >
-        {m.status === 'FINISHED' ? 'FT' : m.status === 'IN_PLAY' ? 'LIVE' : 'Sched.'}
-      </span>
+      </p>
     </div>
   )
 }

@@ -61,10 +61,10 @@ export default function SubmissionsClient({
         </div>
       )}
 
-      <h1 className="text-3xl font-black mb-6 uppercase tracking-tight">Your Submissions</h1>
+      <h1 className="text-2xl md:text-3xl font-black mb-6 uppercase tracking-tight">Your Submissions</h1>
 
       {!locked && (
-        <form onSubmit={create} className="flex gap-3 mb-8">
+        <form onSubmit={create} className="flex flex-col sm:flex-row gap-3 mb-8">
           <input
             type="text"
             value={newName}

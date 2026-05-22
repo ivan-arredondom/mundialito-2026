@@ -1,6 +1,6 @@
 # Mundialito 2026 — Project Status
 
-**Last updated:** 2026-05-21  
+**Last updated:** 2026-05-22  
 **Stack:** Next.js 16 (App Router) + TypeScript + Tailwind CSS + Supabase (Auth + Postgres)  
 **Supabase:** `https://ksozjzzsivsopgnnczay.supabase.co`  
 **Goal:** FIFA World Cup 2026 score prediction pool for San Diego friends (replicating mundialsd.com).
@@ -28,23 +28,20 @@ All core features are built and wired to live Supabase data:
 
 ### Immediate (in order)
 
-1. **Schedule page redesign** — two tabs (Group Stage / Knockouts), card layout with flags + local times; reference `images/UI inspiration/`
-2. **Leaderboard improvements** — medal icons for top 3, avg-pts column, bracket count per user
-3. **Git initial commit** — `git add -A && git commit -m "Initial commit — Mundialito 2026 MVP"` (`.env.local` is gitignored ✓)
-4. **Netlify deploy** — push to GitHub → netlify.com → import project; build auto-detected from `netlify.toml`; add all env vars; add Netlify URL to Supabase Auth redirect URLs
+- **Admin portal — users section** — group users by their group (collapsible per group, ungrouped users in their own section)
+- **Mod nav tab** — show a `/mod` link in the nav for `is_global_mod` users (same pattern as admin tab)
+- **Nav privilege badge flicker fix** — admin/mod nav link doesn't appear until page refresh after login; fix by re-fetching profile on auth state change
+- **Schedule page redesign** — two tabs (Group Stage / Knockouts), card layout with flags + local times; reference `images/UI inspiration/`
+- **Leaderboard improvements** — medal icons for top 3, avg-pts column, bracket count per user
+- **Git initial commit** — `git add -A && git commit -m "Initial commit — Mundialito 2026 MVP"` (`.env.local` is gitignored ✓)
+- **Netlify deploy** — push to GitHub → netlify.com → import project; build auto-detected from `netlify.toml`; add all env vars; add Netlify URL to Supabase Auth redirect URLs
 
-### Future / Out of scope for now
+### Backlog
 
-- Invite code gating (`SanDiego`) on signup
 - Payment tracking / paid bracket status (Venmo $50 flow)
 - Prize pool computation (55/30/15% split, 9% fee)
 - EXACT score count on dashboard (needs live match results)
-- **Admin portal** — planned subsystem:
-  - Super-admin role [Easy] — `is_admin` on `profiles`, guards all `/admin` routes
-  - Global settings [Easy] — `app_settings` table: default max brackets, registrations toggle
-  - Block new registrations [Easy] — toggle in `app_settings`, checked at signup
-  - Global mod role [Easy] — `is_global_mod` flag, same powers as group mod across all groups
-  - Group creation & management [Medium] — `groups` + `group_memberships` + `group_settings` tables
+- **Admin portal — remaining subsystem items:**
   - Group mods [Medium-Hard] — `role` in `group_memberships`; mods set per-user limits, approve paid status
   - Payment approval gate [Medium-Hard] — `paid` boolean on `group_memberships`; excludes unpaid from prize rankings
 

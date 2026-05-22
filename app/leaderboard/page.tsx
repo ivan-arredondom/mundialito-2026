@@ -10,7 +10,7 @@ export default async function LeaderboardPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-black mb-10">Leaderboard</h1>
+      <h1 className="text-2xl md:text-3xl font-black mb-8 md:mb-10">Leaderboard</h1>
       {!rows?.length ? (
         <p className="text-gray-400 text-center py-20">
           No scores yet — predictions lock June 11, 2026.

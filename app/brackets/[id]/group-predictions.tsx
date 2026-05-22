@@ -121,12 +121,13 @@ export default function GroupPredictions({
                 return (
                   <div key={m.id}>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-400 w-20 shrink-0 leading-tight">
+                      {/* Time — hidden on mobile, visible on sm+ */}
+                      <span className="hidden sm:block text-[10px] text-gray-400 w-20 shrink-0 leading-tight">
                         <KickoffTime utc={m.kickoff_at} />
                       </span>
                       <div className="flex-1 text-right min-w-0">
                         <span className="text-xs font-semibold flex items-center justify-end gap-1">
-                          {m.home_team.name}
+                          <span className="truncate">{m.home_team.name}</span>
                           <Flag code={m.home_team.code} />
                         </span>
                       </div>
@@ -158,10 +159,14 @@ export default function GroupPredictions({
                       <div className="flex-1 min-w-0">
                         <span className="text-xs font-semibold flex items-center gap-1">
                           <Flag code={m.away_team.code} />
-                          {m.away_team.name}
+                          <span className="truncate">{m.away_team.name}</span>
                         </span>
                       </div>
                     </div>
+                    {/* Time — mobile only, shown below match row */}
+                    <p className="sm:hidden text-[10px] text-gray-400 text-center mt-0.5 leading-tight">
+                      <KickoffTime utc={m.kickoff_at} />
+                    </p>
                     <div className="flex justify-end mt-0.5 min-h-[14px]">
                       {status !== 'idle' ? (
                         <SaveIndicator status={status} />

@@ -5,8 +5,8 @@ export default function Home() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-[#cc0000] text-white py-24 px-4 text-center">
-        <h1 className="text-5xl font-black tracking-tight mb-2">
+      <section className="bg-[#cc0000] text-white py-14 md:py-24 px-4 text-center">
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-2">
           MUNDIALITO <span className="text-[#f5c518]">2026</span>
         </h1>
         <p className="text-red-200 uppercase tracking-widest text-sm mb-10">
@@ -18,7 +18,7 @@ export default function Home() {
           </p>
           <Countdown />
         </div>
-        <p className="text-red-100 max-w-xl mx-auto mb-10 text-lg leading-relaxed">
+        <p className="text-red-100 max-w-xl mx-auto mb-10 text-base md:text-lg leading-relaxed">
           Predict every score. <strong>48 teams. 104 matches. One champion.</strong> Climb the
           leaderboard.
         </p>
@@ -39,7 +39,7 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="max-w-4xl mx-auto px-4 py-20 grid md:grid-cols-2 gap-12">
+      <section className="max-w-4xl mx-auto px-4 py-12 md:py-20 grid md:grid-cols-2 gap-10 md:gap-12">
         <div>
           <h2 className="text-2xl font-black mb-6 uppercase tracking-tight">How to join</h2>
           <ol className="space-y-4">
