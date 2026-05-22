@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import AdminClient from './admin-client'
 
 export default async function AdminPage() {
-  await requireAdmin()
+  const user = await requireAdmin()
 
   const supabase = await createClient()
 
@@ -19,6 +19,7 @@ export default async function AdminPage() {
       <AdminClient
         initialSettings={settings ?? { allow_registrations: true, max_brackets_per_user: 3 }}
         initialGroups={groups ?? []}
+        currentUserId={user.id}
       />
     </div>
   )

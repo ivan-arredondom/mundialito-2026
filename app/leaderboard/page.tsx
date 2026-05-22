@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import Link from 'next/link'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
@@ -17,7 +18,54 @@ type RawMember = {
   profiles: { display_name: string } | null
 }
 
-export default async function LeaderboardPage() {
+type Bracket = {
+  id: string
+  display_name: string
+  user_id: string
+  bracket_name: string
+  points: number
+  created_at: string
+  group_name: string | null
+}
+
+type RankedBracket = Bracket & { rank: number }
+
+function buildRanked(
+  rawBrackets: RawBracket[],
+  groupByUser: Record<string, string | null> = {}
+): RankedBracket[] {
+  const brackets: Bracket[] = rawBrackets.map(b => ({
+    id: b.id,
+    display_name: b.profiles?.display_name ?? 'Unknown',
+    user_id: b.user_id,
+    bracket_name: b.name,
+    points: b.bracket_scores?.[0]?.points ?? 0,
+    created_at: b.created_at,
+    group_name: groupByUser[b.user_id] ?? null,
+  }))
+
+  brackets.sort((a, b) =>
+    b.points - a.points ||
+    a.display_name.localeCompare(b.display_name) ||
+    a.created_at.localeCompare(b.created_at)
+  )
+
+  const ranked: RankedBracket[] = []
+  for (let i = 0; i < brackets.length; i++) {
+    const rank = i > 0 && brackets[i].points === brackets[i - 1].points
+      ? ranked[i - 1].rank
+      : i + 1
+    ranked.push({ ...brackets[i], rank })
+  }
+  return ranked
+}
+
+export default async function LeaderboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const { tab } = await searchParams
   const supabase = await createClient()
   const admin = createAdminClient()
 
@@ -25,7 +73,6 @@ export default async function LeaderboardPage() {
 
   let groupId: number | null = null
   let groupName: string | null = null
-  let noSubmissionUsers: string[] = []
 
   if (user) {
     const { data: membership } = await supabase
@@ -39,79 +86,98 @@ export default async function LeaderboardPage() {
     }
   }
 
-  let members: RawMember[] = []
+  const activeTab = (!groupId || tab === 'global') ? 'global' : 'group'
+  const baseSelect = 'id, name, user_id, created_at, profiles(display_name), bracket_scores(points)'
 
-  if (groupId) {
-    const { data } = await admin
+  let ranked: RankedBracket[] = []
+  let noSubmissionUsers: string[] = []
+
+  if (activeTab === 'group' && groupId) {
+    const { data: memberData } = await admin
       .from('group_memberships')
       .select('user_id, profiles(display_name)')
       .eq('group_id', groupId)
-    members = (data ?? []) as unknown as RawMember[]
-  }
+    const members = (memberData ?? []) as unknown as RawMember[]
+    const memberIds = members.map(m => m.user_id)
 
-  const memberIds = members.map(m => m.user_id)
+    const { data: rawBrackets } = await admin
+      .from('brackets')
+      .select(baseSelect)
+      .in('user_id', memberIds)
+      .order('created_at', { ascending: true })
 
-  const baseQuery = admin
-    .from('brackets')
-    .select('id, name, user_id, created_at, profiles(display_name), bracket_scores(points)')
-    .order('created_at', { ascending: true })
+    ranked = buildRanked((rawBrackets ?? []) as unknown as RawBracket[])
 
-  const { data: rawBrackets } = await (
-    memberIds.length > 0 ? baseQuery.in('user_id', memberIds) : baseQuery
-  )
-
-  const brackets = ((rawBrackets ?? []) as unknown as RawBracket[]).map(b => ({
-    id: b.id,
-    display_name: b.profiles?.display_name ?? 'Unknown',
-    user_id: b.user_id,
-    bracket_name: b.name,
-    points: b.bracket_scores?.[0]?.points ?? 0,
-    created_at: b.created_at,
-  }))
-
-  brackets.sort((a, b) =>
-    b.points - a.points ||
-    a.display_name.localeCompare(b.display_name) ||
-    a.created_at.localeCompare(b.created_at)
-  )
-
-  const ranked: (typeof brackets[0] & { rank: number })[] = []
-  for (let i = 0; i < brackets.length; i++) {
-    const rank = i > 0 && brackets[i].points === brackets[i - 1].points
-      ? ranked[i - 1].rank
-      : i + 1
-    ranked.push({ ...brackets[i], rank })
-  }
-
-  if (groupId) {
-    const usersWithBrackets = new Set(brackets.map(b => b.user_id))
+    const usersWithBrackets = new Set(ranked.map(b => b.user_id))
     noSubmissionUsers = members
       .filter(m => !usersWithBrackets.has(m.user_id))
-      .map(m => m.profiles?.display_name ?? 'Unknown')
+      .map(m => (m.profiles as unknown as { display_name: string } | null)?.display_name ?? 'Unknown')
       .sort()
+  } else {
+    const [{ data: rawBrackets }, { data: allMemberships }] = await Promise.all([
+      admin.from('brackets').select(baseSelect).order('created_at', { ascending: true }),
+      admin.from('group_memberships').select('user_id, groups(name)'),
+    ])
+
+    const groupByUser: Record<string, string | null> = Object.fromEntries(
+      (allMemberships ?? []).map(m => [
+        m.user_id,
+        (m.groups as unknown as { name: string } | null)?.name ?? null,
+      ])
+    )
+
+    ranked = buildRanked((rawBrackets ?? []) as unknown as RawBracket[], groupByUser)
   }
 
+  const showGroupCol = activeTab === 'global'
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
-      <h1 className="text-2xl md:text-3xl font-black mb-1">Leaderboard</h1>
-      <p className="text-sm text-gray-500 mb-8">{groupName ?? ''}</p>
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      <h1 className="text-2xl md:text-3xl font-black mb-6">Leaderboard</h1>
+
+      {/* Tabs — only shown when user is in a group */}
+      {groupId && (
+        <div className="flex gap-6 mb-8 border-b border-gray-200">
+          <Link
+            href="/leaderboard"
+            className={`pb-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+              activeTab === 'group'
+                ? 'border-[#cc0000] text-[#cc0000]'
+                : 'border-transparent text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            {groupName ?? 'My Group'}
+          </Link>
+          <Link
+            href="/leaderboard?tab=global"
+            className={`pb-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+              activeTab === 'global'
+                ? 'border-[#cc0000] text-[#cc0000]'
+                : 'border-transparent text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            Global
+          </Link>
+        </div>
+      )}
 
       {ranked.length === 0 ? (
         <p className="text-gray-400 text-center py-16">No submissions yet.</p>
       ) : (
         <>
-          <div className="grid grid-cols-[2rem_1fr_1fr_auto] gap-x-3 px-4 mb-2 text-[10px] uppercase tracking-widest text-gray-400 font-semibold">
+          <div className={`grid ${showGroupCol ? 'grid-cols-[2rem_1fr_1fr_1fr_auto]' : 'grid-cols-[2rem_1fr_1fr_auto]'} gap-x-3 px-4 mb-2 text-[10px] uppercase tracking-widest text-gray-400 font-semibold`}>
             <span />
             <span>Player</span>
+            {showGroupCol && <span>Group</span>}
             <span>Submission</span>
             <span className="text-right">Pts</span>
           </div>
 
           <div className="space-y-1">
-            {ranked.map((b) => (
+            {ranked.map(b => (
               <div
                 key={b.id}
-                className={`grid grid-cols-[2rem_1fr_1fr_auto] gap-x-3 items-center px-4 py-3 rounded-xl ${
+                className={`grid ${showGroupCol ? 'grid-cols-[2rem_1fr_1fr_1fr_auto]' : 'grid-cols-[2rem_1fr_1fr_auto]'} gap-x-3 items-center px-4 py-3 rounded-xl ${
                   b.rank === 1 && b.points > 0 ? 'bg-[#f5c518]/10 border border-[#f5c518]/40' :
                   b.rank === 2 && b.points > 0 ? 'bg-gray-100' :
                   b.rank === 3 && b.points > 0 ? 'bg-orange-50' : 'bg-gray-50'
@@ -124,6 +190,9 @@ export default async function LeaderboardPage() {
                   }
                 </span>
                 <span className="font-semibold text-sm truncate">{b.display_name}</span>
+                {showGroupCol && (
+                  <span className="text-xs text-gray-400 truncate">{b.group_name ?? '—'}</span>
+                )}
                 <span className="text-sm text-gray-500 truncate">{b.bracket_name}</span>
                 <span className="font-black text-[#cc0000] tabular-nums text-right">{b.points}</span>
               </div>

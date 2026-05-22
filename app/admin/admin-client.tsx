@@ -33,9 +33,11 @@ interface UserRow {
 export default function AdminClient({
   initialSettings,
   initialGroups,
+  currentUserId,
 }: {
   initialSettings: Settings
   initialGroups: Group[]
+  currentUserId: string
 }) {
   const [settings, setSettings] = useState(initialSettings)
   const [groups, setGroups] = useState(initialGroups)
@@ -394,6 +396,7 @@ export default function AdminClient({
         ) : (
           <UsersByGroup
             users={users}
+            currentUserId={currentUserId}
             expandedUserGroups={expandedUserGroups}
             setExpandedUserGroups={setExpandedUserGroups}
             onToggleGlobalMod={toggleGlobalMod}
@@ -408,11 +411,13 @@ export default function AdminClient({
 
 function UserRow({
   u,
+  isSelf,
   onToggleGlobalMod,
   onToggleAdmin,
   onDelete,
 }: {
   u: UserRow
+  isSelf: boolean
   onToggleGlobalMod: (u: UserRow) => void
   onToggleAdmin: (u: UserRow) => void
   onDelete: (u: UserRow) => void
@@ -422,27 +427,30 @@ function UserRow({
       <span className="flex-1 font-semibold min-w-0 truncate">{u.display_name}</span>
       <button
         onClick={() => onToggleGlobalMod(u)}
+        disabled={isSelf}
         className={`text-xs px-2 py-0.5 rounded-full border transition-colors shrink-0 ${
           u.is_global_mod
             ? 'bg-blue-100 text-blue-700 border-blue-200'
             : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-blue-300'
-        }`}
+        } disabled:opacity-40 disabled:cursor-not-allowed`}
       >
         Global Mod
       </button>
       <button
         onClick={() => onToggleAdmin(u)}
+        disabled={isSelf}
         className={`text-xs px-2 py-0.5 rounded-full border transition-colors shrink-0 ${
           u.is_admin
             ? 'bg-[#cc0000] text-white border-[#cc0000]'
             : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-[#cc0000]'
-        }`}
+        } disabled:opacity-40 disabled:cursor-not-allowed`}
       >
         Admin
       </button>
       <button
         onClick={() => onDelete(u)}
-        className="text-xs text-red-500 hover:text-red-700 shrink-0"
+        disabled={isSelf}
+        className="text-xs text-red-500 hover:text-red-700 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         Delete
       </button>
@@ -452,6 +460,7 @@ function UserRow({
 
 function UsersByGroup({
   users,
+  currentUserId,
   expandedUserGroups,
   setExpandedUserGroups,
   onToggleGlobalMod,
@@ -459,6 +468,7 @@ function UsersByGroup({
   onDelete,
 }: {
   users: UserRow[]
+  currentUserId: string
   expandedUserGroups: Set<string>
   setExpandedUserGroups: React.Dispatch<React.SetStateAction<Set<string>>>
   onToggleGlobalMod: (u: UserRow) => void
@@ -510,6 +520,7 @@ function UsersByGroup({
               <UserRow
                 key={u.id}
                 u={u}
+                isSelf={u.id === currentUserId}
                 onToggleGlobalMod={onToggleGlobalMod}
                 onToggleAdmin={onToggleAdmin}
                 onDelete={onDelete}

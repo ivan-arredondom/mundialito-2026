@@ -46,7 +46,7 @@ export default async function ModPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <h1 className="text-2xl md:text-3xl font-black mb-1">Mod Panel</h1>
       <p className="text-gray-500 text-sm mb-8">Mundialito 2026 — moderator controls</p>
-      <ModClient groups={groups} />
+      <ModClient groups={groups} currentUserId={user.id} />
     </div>
   )
 }

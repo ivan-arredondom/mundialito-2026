@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface Group {
   id: number
@@ -17,7 +17,7 @@ interface Member {
   profiles: { display_name: string }
 }
 
-export default function ModClient({ groups }: { groups: Group[] }) {
+export default function ModClient({ groups, currentUserId }: { groups: Group[]; currentUserId: string }) {
   const [expanded, setExpanded] = useState<Set<number>>(
     groups.length === 1 ? new Set([groups[0].id]) : new Set()
   )
@@ -29,6 +29,24 @@ export default function ModClient({ groups }: { groups: Group[] }) {
     setTimeout(() => setMsg(''), 3000)
   }
 
+  const loadMembers = useCallback(async (groupId: number) => {
+    const res = await fetch(`/api/mod/members?group_id=${groupId}`)
+    const data = await res.json()
+    if (!res.ok) {
+      flash(`Error loading members: ${data.error ?? res.status}`)
+      return
+    }
+    setMembersByGroup(m => ({ ...m, [groupId]: Array.isArray(data) ? data : [] }))
+  }, [])
+
+  // Fetch members for groups that start expanded
+  useEffect(() => {
+    for (const groupId of expanded) {
+      loadMembers(groupId)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function toggleExpand(groupId: number) {
     if (expanded.has(groupId)) {
       setExpanded(e => { const n = new Set(e); n.delete(groupId); return n })
@@ -36,9 +54,7 @@ export default function ModClient({ groups }: { groups: Group[] }) {
     }
     setExpanded(e => new Set([...e, groupId]))
     if (!membersByGroup[groupId]) {
-      const res = await fetch(`/api/mod/members?group_id=${groupId}`)
-      const data = await res.json()
-      setMembersByGroup(m => ({ ...m, [groupId]: data }))
+      await loadMembers(groupId)
     }
   }
 
@@ -168,17 +184,19 @@ export default function ModClient({ groups }: { groups: Group[] }) {
                         </button>
                         <button
                           onClick={() => toggleRole(g.id, m)}
+                          disabled={m.user_id === currentUserId}
                           className={`text-xs px-2 py-0.5 rounded-full border transition-colors shrink-0 ${
                             m.role === 'mod'
                               ? 'bg-blue-100 text-blue-700 border-blue-200'
                               : 'bg-white text-gray-400 border-gray-200 hover:border-blue-300'
-                          }`}
+                          } disabled:opacity-40 disabled:cursor-not-allowed`}
                         >
                           {m.role === 'mod' ? 'Mod' : 'Member'}
                         </button>
                         <button
                           onClick={() => removeMember(g.id, m)}
-                          className="text-xs text-red-500 hover:text-red-700 shrink-0"
+                          disabled={m.user_id === currentUserId}
+                          className="text-xs text-red-500 hover:text-red-700 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           Remove
                         </button>

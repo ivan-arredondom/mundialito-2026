@@ -125,7 +125,10 @@ function GroupMatchRow({ m }: { m: MatchRow }) {
       <div className="flex items-center gap-2">
         {/* Home */}
         <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-          <span className="text-xs font-medium truncate">{m.home_team?.name ?? 'TBD'}</span>
+          <div className="min-w-0 text-right">
+            <p className="text-xs font-medium truncate">{m.home_team?.name ?? 'TBD'}</p>
+            {m.home_team && <p className="text-[10px] text-gray-400 font-mono">{m.home_team.code}</p>}
+          </div>
           {m.home_team && <Flag code={m.home_team.code} size="sm" />}
         </div>
         {/* Score / vs */}
@@ -137,7 +140,10 @@ function GroupMatchRow({ m }: { m: MatchRow }) {
         {/* Away */}
         <div className="flex-1 flex items-center gap-1.5 min-w-0">
           {m.away_team && <Flag code={m.away_team.code} size="sm" />}
-          <span className="text-xs font-medium truncate">{m.away_team?.name ?? 'TBD'}</span>
+          <div className="min-w-0">
+            <p className="text-xs font-medium truncate">{m.away_team?.name ?? 'TBD'}</p>
+            {m.away_team && <p className="text-[10px] text-gray-400 font-mono">{m.away_team.code}</p>}
+          </div>
         </div>
       </div>
       <p className="text-[10px] text-gray-400 text-center mt-1 leading-tight">

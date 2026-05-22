@@ -20,7 +20,7 @@ All core features are built and wired to live Supabase data:
 - **Schedule** — all 104 matches with local kickoff times, two tabs (Group Stage / Knockouts), flags
 - **Leaderboard** — group-scoped ranking; all members shown (even with 0 brackets); no-submission section at bottom
 - **Admin panel** — global settings, groups CRUD, user management (admin/global-mod toggles), users grouped by group with collapsible sections
-- **Mod panel** — group member management (promote/demote, remove); global mods see all groups, group mods see their own
+- **Mod panel** — group member management (promote/demote, remove, mark paid/unpaid); global mods see all groups, group mods see their own
 - **Results sync** — `/api/results/sync` (POST, protected by `SYNC_SECRET`); Netlify cron runs every hour
 - **Data reset** — `/api/admin/seed` (POST, same secret) — wipes and re-seeds all teams + matches from API; safe to re-run
 
@@ -30,19 +30,15 @@ All core features are built and wired to live Supabase data:
 
 ### Immediate (in order)
 
-- **Admin Global Mod toggle bug** — toggle silently fails (DB not updated); error handling now surfaces the real error on-screen; root cause likely `assertAdmin()` failing in PATCH context. Needs live testing to see the actual error message.
-- **Git initial commit** — `git add -A && git commit -m "Initial commit — Mundialito 2026 MVP"` (`.env.local` is gitignored ✓)
 - **Netlify deploy** — push to GitHub → netlify.com → import project; build auto-detected from `netlify.toml`; add all env vars; add Netlify URL to Supabase Auth redirect URLs
 
 ### Backlog
 
-- Payment tracking / paid bracket status (Venmo $50 flow) — `paid` boolean on `group_memberships`; exclude unpaid from prize rankings
+- Payment tracking — `paid` column exists on `group_memberships` (migration 0009), mods can toggle it per member; still TODO: exclude unpaid from prize rankings
 - Prize pool computation (55/30/15% split, 9% fee)
 - Live score sync not possible on free football-data.org tier — results will be manual or hourly batch only
 - Results page (low priority)
-- **Admin portal — remaining subsystem items:**
-  - Group mods setting per-user limits per-group (currently global only)
-  - Payment approval gate — approve paid status per member
+- Group mods setting per-user bracket limits per-group (currently global only)
 
 ---
 
