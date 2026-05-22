@@ -132,7 +132,7 @@ export default function GroupPredictions({
                         </span>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        <ScoreInput
+                        <ScoreField
                           value={pred?.home ?? ''}
                           onChange={v =>
                             setPreds(p => ({
@@ -140,11 +140,11 @@ export default function GroupPredictions({
                               [m.id]: { ...(p[m.id] ?? { home: '', away: '' }), home: v },
                             }))
                           }
-                          onBlur={() => save(m.id)}
+                          onCommit={() => save(m.id)}
                           disabled={!canEdit}
                         />
                         <span className="text-gray-400 text-xs">-</span>
-                        <ScoreInput
+                        <ScoreField
                           value={pred?.away ?? ''}
                           onChange={v =>
                             setPreds(p => ({
@@ -152,7 +152,7 @@ export default function GroupPredictions({
                               [m.id]: { ...(p[m.id] ?? { home: '', away: '' }), away: v },
                             }))
                           }
-                          onBlur={() => save(m.id)}
+                          onCommit={() => save(m.id)}
                           disabled={!canEdit}
                         />
                       </div>
@@ -192,27 +192,47 @@ function Flag({ code }: { code: string }) {
   return <img src={src} alt={code} className="w-5 h-auto inline-block shrink-0" />
 }
 
-function ScoreInput({
+function ScoreField({
   value,
   onChange,
-  onBlur,
+  onCommit,
   disabled,
 }: {
   value: string
   onChange: (v: string) => void
-  onBlur: () => void
+  onCommit: () => void
   disabled: boolean
 }) {
   return (
-    <input
-      type="number"
-      min={0}
-      max={20}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      onBlur={onBlur}
-      disabled={disabled}
-      className="w-10 sm:w-9 text-center border border-gray-300 rounded px-1 py-1 sm:py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#cc0000] disabled:bg-gray-50 disabled:text-gray-400"
-    />
+    <div className="flex flex-col items-center gap-0.5">
+      <input
+        type="number"
+        min={0}
+        max={20}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onBlur={onCommit}
+        disabled={disabled}
+        className="w-10 text-center border border-gray-300 rounded px-1 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#cc0000] disabled:bg-gray-50 disabled:text-gray-400"
+      />
+      {!disabled && (
+        <div className="flex gap-0.5">
+          {[0, 1, 2, 3].map(n => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => { onChange(String(n)); setTimeout(onCommit, 0) }}
+              className={`w-[18px] h-[18px] text-[10px] font-semibold rounded border transition-colors ${
+                value === String(n)
+                  ? 'bg-[#cc0000] text-white border-[#cc0000]'
+                  : 'bg-white text-gray-500 border-gray-300 hover:border-[#cc0000] hover:text-[#cc0000]'
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

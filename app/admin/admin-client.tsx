@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 
 interface Settings {
   allow_registrations: boolean
@@ -46,6 +46,7 @@ export default function AdminClient({
   const [msg, setMsg] = useState('')
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null)
   const [membersByGroup, setMembersByGroup] = useState<Record<number, Member[]>>({})
+  const [expandedUserGroups, setExpandedUserGroups] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetch('/api/admin/users').then(r => r.json()).then(setUsers)
@@ -154,23 +155,35 @@ export default function AdminClient({
   async function toggleAdmin(user: UserRow) {
     const next = !user.is_admin
     setUsers(u => u.map(x => x.id === user.id ? { ...x, is_admin: next } : x))
-    await fetch('/api/admin/users', {
+    const res = await fetch('/api/admin/users', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: user.id, is_admin: next }),
     })
-    flash(`${user.display_name} ${next ? 'granted' : 'revoked'} admin`)
+    if (!res.ok) {
+      setUsers(u => u.map(x => x.id === user.id ? { ...x, is_admin: !next } : x))
+      const json = await res.json().catch(() => ({}))
+      flash(`Error: ${json.error ?? res.status}`)
+    } else {
+      flash(`${user.display_name} ${next ? 'granted' : 'revoked'} admin`)
+    }
   }
 
   async function toggleGlobalMod(user: UserRow) {
     const next = !user.is_global_mod
     setUsers(u => u.map(x => x.id === user.id ? { ...x, is_global_mod: next } : x))
-    await fetch('/api/admin/users', {
+    const res = await fetch('/api/admin/users', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: user.id, is_global_mod: next }),
     })
-    flash(`${user.display_name} ${next ? 'made' : 'removed as'} global mod`)
+    if (!res.ok) {
+      setUsers(u => u.map(x => x.id === user.id ? { ...x, is_global_mod: !next } : x))
+      const json = await res.json().catch(() => ({}))
+      flash(`Error: ${json.error ?? res.status}`)
+    } else {
+      flash(`${user.display_name} ${next ? 'made' : 'removed as'} global mod`)
+    }
   }
 
   async function deleteUser(user: UserRow) {
@@ -376,52 +389,146 @@ export default function AdminClient({
         <h2 className="text-lg font-black uppercase tracking-widest text-gray-500 mb-4 border-b pb-2">
           Users
         </h2>
-        <div className="space-y-1">
-          {users.map(u => {
-            const membership = u.group_memberships?.[0]
-            const groupLabel = membership
-              ? `${(membership.groups as unknown as { name: string })?.name} (${membership.role})`
-              : '—'
-            return (
-              <div key={u.id} className="flex items-center gap-3 py-2 border-b border-gray-50 text-sm">
-                <div className="flex-1 min-w-0">
-                  <span className="font-semibold">{u.display_name}</span>
-                  <span className="ml-2 text-xs text-gray-400">{groupLabel}</span>
-                </div>
-                <button
-                  onClick={() => toggleGlobalMod(u)}
-                  className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                    u.is_global_mod
-                      ? 'bg-blue-100 text-blue-700 border-blue-200'
-                      : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-blue-300'
-                  }`}
-                >
-                  Global Mod
-                </button>
-                <button
-                  onClick={() => toggleAdmin(u)}
-                  className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                    u.is_admin
-                      ? 'bg-[#cc0000] text-white border-[#cc0000]'
-                      : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-[#cc0000]'
-                  }`}
-                >
-                  Admin
-                </button>
-                <button
-                  onClick={() => deleteUser(u)}
-                  className="text-xs text-red-500 hover:text-red-700"
-                >
-                  Delete
-                </button>
-              </div>
-            )
-          })}
-          {users.length === 0 && (
-            <p className="text-sm text-gray-400 py-4">Loading users…</p>
-          )}
-        </div>
+        {users.length === 0 ? (
+          <p className="text-sm text-gray-400 py-4">Loading users…</p>
+        ) : (
+          <UsersByGroup
+            users={users}
+            expandedUserGroups={expandedUserGroups}
+            setExpandedUserGroups={setExpandedUserGroups}
+            onToggleGlobalMod={toggleGlobalMod}
+            onToggleAdmin={toggleAdmin}
+            onDelete={deleteUser}
+          />
+        )}
       </section>
+    </div>
+  )
+}
+
+function UserRow({
+  u,
+  onToggleGlobalMod,
+  onToggleAdmin,
+  onDelete,
+}: {
+  u: UserRow
+  onToggleGlobalMod: (u: UserRow) => void
+  onToggleAdmin: (u: UserRow) => void
+  onDelete: (u: UserRow) => void
+}) {
+  return (
+    <div className="flex items-center gap-3 py-2 border-b border-gray-50 text-sm">
+      <span className="flex-1 font-semibold min-w-0 truncate">{u.display_name}</span>
+      <button
+        onClick={() => onToggleGlobalMod(u)}
+        className={`text-xs px-2 py-0.5 rounded-full border transition-colors shrink-0 ${
+          u.is_global_mod
+            ? 'bg-blue-100 text-blue-700 border-blue-200'
+            : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-blue-300'
+        }`}
+      >
+        Global Mod
+      </button>
+      <button
+        onClick={() => onToggleAdmin(u)}
+        className={`text-xs px-2 py-0.5 rounded-full border transition-colors shrink-0 ${
+          u.is_admin
+            ? 'bg-[#cc0000] text-white border-[#cc0000]'
+            : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-[#cc0000]'
+        }`}
+      >
+        Admin
+      </button>
+      <button
+        onClick={() => onDelete(u)}
+        className="text-xs text-red-500 hover:text-red-700 shrink-0"
+      >
+        Delete
+      </button>
+    </div>
+  )
+}
+
+function UsersByGroup({
+  users,
+  expandedUserGroups,
+  setExpandedUserGroups,
+  onToggleGlobalMod,
+  onToggleAdmin,
+  onDelete,
+}: {
+  users: UserRow[]
+  expandedUserGroups: Set<string>
+  setExpandedUserGroups: React.Dispatch<React.SetStateAction<Set<string>>>
+  onToggleGlobalMod: (u: UserRow) => void
+  onToggleAdmin: (u: UserRow) => void
+  onDelete: (u: UserRow) => void
+}) {
+  const grouped: Record<string, UserRow[]> = {}
+  const ungrouped: UserRow[] = []
+
+  for (const u of users) {
+    const membership = u.group_memberships?.[0]
+    const groupName = membership
+      ? (membership.groups as unknown as { name: string })?.name ?? 'Unknown'
+      : null
+    if (groupName) {
+      ;(grouped[groupName] ??= []).push(u)
+    } else {
+      ungrouped.push(u)
+    }
+  }
+
+  const groupNames = Object.keys(grouped).sort()
+
+  function toggleGroup(key: string) {
+    setExpandedUserGroups(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+
+  function GroupSection({ label, members }: { label: string; members: UserRow[] }) {
+    const open = expandedUserGroups.has(label)
+    return (
+      <div className="border border-gray-100 rounded-lg overflow-hidden mb-2">
+        <button
+          onClick={() => toggleGroup(label)}
+          className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+        >
+          <span className="text-sm font-semibold">{label}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-400">{members.length} user{members.length !== 1 ? 's' : ''}</span>
+            <span className="text-gray-400 text-xs">{open ? '▲' : '▼'}</span>
+          </div>
+        </button>
+        {open && (
+          <div className="px-4 divide-y divide-gray-50">
+            {members.map(u => (
+              <UserRow
+                key={u.id}
+                u={u}
+                onToggleGlobalMod={onToggleGlobalMod}
+                onToggleAdmin={onToggleAdmin}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {groupNames.map(name => (
+        <GroupSection key={name} label={name} members={grouped[name]} />
+      ))}
+      {ungrouped.length > 0 && (
+        <GroupSection label="Ungrouped" members={ungrouped} />
+      )}
     </div>
   )
 }
