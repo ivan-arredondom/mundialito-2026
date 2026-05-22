@@ -29,12 +29,15 @@ All core features are built and wired to live Supabase data:
 ### Immediate (in order)
 
 - **Admin portal — users section** — group users by their group (collapsible per group, ungrouped users in their own section)
-- **Mod nav tab** — show a `/mod` link in the nav for `is_global_mod` users (same pattern as admin tab)
-- **Nav privilege badge flicker fix** — admin/mod nav link doesn't appear until page refresh after login; fix by re-fetching profile on auth state change
 - **Schedule page redesign** — two tabs (Group Stage / Knockouts), card layout with flags + local times; reference `images/UI inspiration/`
-- **Leaderboard improvements** — medal icons for top 3, avg-pts column, bracket count per user
 - **Git initial commit** — `git add -A && git commit -m "Initial commit — Mundialito 2026 MVP"` (`.env.local` is gitignored ✓)
 - **Netlify deploy** — push to GitHub → netlify.com → import project; build auto-detected from `netlify.toml`; add all env vars; add Netlify URL to Supabase Auth redirect URLs
+
+### Recently completed
+- **Mod nav tab** — `/mod` page created; `is_global_mod` users see "Mod" link, `is_admin` users see "Admin" link (split from single `isPrivileged` flag)
+- **Nav privilege badge flicker fix** — profile now re-fetched inside `onAuthStateChange` so links appear immediately after login
+- **Leaderboard** — group members always shown (even with 0 brackets/points); medal icons for top 3; bracket count per user; falls back to global view if not in a group
+- **Mobile responsiveness** — hamburger nav, responsive hero, schedule row layout reworked, dashboard form stacks on mobile, group predictions time column hidden on small screens
 
 ### Backlog
 
