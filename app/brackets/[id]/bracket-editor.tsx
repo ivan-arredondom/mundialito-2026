@@ -141,7 +141,7 @@ export default function BracketEditor({
       >
         ← All Submissions
       </Link>
-      <h1 className="text-3xl font-black mb-4">{bracketName}</h1>
+      <h1 className="text-2xl md:text-3xl font-black mb-4 truncate">{bracketName}</h1>
 
       {canEdit && (
         <div className="border border-red-300 bg-red-50 rounded-xl px-4 py-2 mb-4 text-sm text-red-600 font-medium">
@@ -154,12 +154,12 @@ export default function BracketEditor({
         <ProgressBar label={`${koPickCount} / 32 knockout picks`} value={koPickCount} max={32} />
       </div>
 
-      <div className="flex gap-1 mb-6 flex-wrap">
+      <div className="flex gap-1 mb-6 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
         {ALL_TABS.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all shrink-0 ${
               activeTab === tab
                 ? 'bg-[#cc0000] text-white border-[#cc0000]'
                 : 'bg-white text-gray-700 border-gray-300 hover:border-[#cc0000]'
@@ -204,15 +204,14 @@ export default function BracketEditor({
 function ProgressBar({ label, value, max }: { label: string; value: number; max: number }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-gray-600 w-48 shrink-0">{label}</span>
-      <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-        <div
-          className="bg-[#cc0000] h-1.5 rounded-full transition-all"
-          style={{ width: `${pct}%` }}
-        />
+    <div>
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-xs text-gray-600">{label}</span>
+        <span className="text-xs text-gray-400">{pct}%</span>
       </div>
-      <span className="text-xs text-gray-400 w-8 text-right">{pct}%</span>
+      <div className="bg-gray-200 rounded-full h-1.5">
+        <div className="bg-[#cc0000] h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+      </div>
     </div>
   )
 }

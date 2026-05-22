@@ -1,4 +1,4 @@
-import { requireMod } from '@/lib/require-mod'
+import { requireMod } from '@/lib/require-role'
 
 export default async function ModPage() {
   await requireMod()

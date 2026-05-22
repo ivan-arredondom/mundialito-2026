@@ -52,7 +52,8 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'{len\\(d\\)} matches with null kickoff_at'\\); [print\\(x\\) for x in d]\")",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'{len\\(d\\)} matches still have null teams'\\)\")",
       "Bash(curl -s 'https://ksozjzzsivsopgnnczay.supabase.co/rest/v1/matches?select=kickoff_at,stage&limit=3&order=kickoff_at' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtzb3pqenpzaXZzb3Bnbm5jemF5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTM5ODc5NiwiZXhwIjoyMDk0OTc0Nzk2fQ.xcsSqVIy-JFW6Tw-dpqegPa1ppagXAB4NEaFvxFkqHQ' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtzb3pqenpzaXZzb3Bnbm5jemF5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTM5ODc5NiwiZXhwIjoyMDk0OTc0Nzk2fQ.xcsSqVIy-JFW6Tw-dpqegPa1ppagXAB4NEaFvxFkqHQ')",
-      "Bash(awk '{print $NF}')"
+      "Bash(awk '{print $NF}')",
+      "Bash(del lib\\\\require-admin.ts lib\\\\require-mod.ts)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jesus\\Documents\\GitHub\\mundialito-2026\\app\\brackets"

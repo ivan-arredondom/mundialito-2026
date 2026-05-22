@@ -55,6 +55,7 @@ export default function Nav() {
 
     loadUser()
 
+    // Re-fetch profile when auth state changes (e.g. after login)
     const { data: sub } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
@@ -65,7 +66,18 @@ export default function Nav() {
         setIsGlobalMod(false)
       }
     })
-    return () => sub.subscription.unsubscribe()
+
+    // Re-fetch profile when tab regains focus so role changes made by an admin
+    // are reflected without requiring a full page reload
+    function onVisible() {
+      if (document.visibilityState === 'visible') loadUser()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      sub.subscription.unsubscribe()
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   useEffect(() => { setMenuOpen(false) }, [pathname])
@@ -76,6 +88,49 @@ export default function Nav() {
     window.location.href = '/'
   }
 
+  const navLinks = links.map((l) => (
+    <Link
+      key={l.href}
+      href={l.href}
+      className={`font-medium hover:text-[#f5c518] transition-colors ${pathname === l.href ? 'text-[#f5c518]' : ''}`}
+    >
+      {l.label}
+    </Link>
+  ))
+
+  const authActions = user ? (
+    <>
+      <Link href="/dashboard" className="hover:text-[#f5c518] transition-colors">
+        My Brackets
+      </Link>
+      {isGlobalMod && (
+        <Link href="/mod" className={`hover:text-[#f5c518] transition-colors ${pathname === '/mod' ? 'text-[#f5c518]' : ''}`}>
+          Mod
+        </Link>
+      )}
+      {isAdmin && (
+        <Link href="/admin" className={`hover:text-[#f5c518] transition-colors ${pathname === '/admin' ? 'text-[#f5c518]' : ''}`}>
+          Admin
+        </Link>
+      )}
+      <button onClick={signOut} className="text-left hover:text-[#f5c518] transition-colors">
+        Sign out
+      </button>
+    </>
+  ) : (
+    <>
+      <Link href="/login" className="hover:text-[#f5c518] transition-colors">
+        Log in
+      </Link>
+      <Link
+        href="/signup"
+        className="bg-[#f5c518] text-black font-semibold px-3 py-1 rounded hover:bg-yellow-300 transition-colors"
+      >
+        Join the pool
+      </Link>
+    </>
+  )
+
   return (
     <nav className="bg-[#cc0000] text-white">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-4">
@@ -83,60 +138,19 @@ export default function Nav() {
           MUNDIALITO <span className="text-[#f5c518]">2026</span>
         </Link>
         {groupName && (
-          <span className="hidden sm:inline text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full shrink-0">
+          <span className="hidden sm:inline text-xs font-semibold bg-white/20 px-2 py-0.5 rounded-full shrink-0">
             {groupName}
           </span>
         )}
 
         {/* Desktop nav links */}
-        <div className="hidden md:flex gap-4 flex-1">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`text-sm font-medium hover:text-[#f5c518] transition-colors ${
-                pathname === l.href ? 'text-[#f5c518]' : ''
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+        <div className="hidden md:flex gap-4 flex-1 text-sm">
+          {navLinks}
         </div>
 
-        {/* Desktop right side */}
+        {/* Desktop auth actions */}
         <div className="hidden md:flex gap-3 items-center text-sm ml-auto">
-          {user ? (
-            <>
-              <Link href="/dashboard" className="hover:text-[#f5c518] transition-colors">
-                My Brackets
-              </Link>
-              {isGlobalMod && (
-                <Link href="/mod" className={`hover:text-[#f5c518] transition-colors ${pathname === '/mod' ? 'text-[#f5c518]' : ''}`}>
-                  Mod
-                </Link>
-              )}
-              {isAdmin && (
-                <Link href="/admin" className={`hover:text-[#f5c518] transition-colors ${pathname === '/admin' ? 'text-[#f5c518]' : ''}`}>
-                  Admin
-                </Link>
-              )}
-              <button onClick={signOut} className="hover:text-[#f5c518] transition-colors">
-                Sign out
-              </button>
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="hover:text-[#f5c518] transition-colors">
-                Log in
-              </Link>
-              <Link
-                href="/signup"
-                className="bg-[#f5c518] text-black font-semibold px-3 py-1 rounded hover:bg-yellow-300 transition-colors"
-              >
-                Join the pool
-              </Link>
-            </>
-          )}
+          {authActions}
         </div>
 
         {/* Mobile hamburger */}
@@ -157,58 +171,17 @@ export default function Nav() {
         </button>
       </div>
 
-      {/* Mobile dropdown menu */}
+      {/* Mobile dropdown */}
       {menuOpen && (
         <div className="md:hidden bg-[#aa0000] px-4 py-4 flex flex-col gap-4 text-sm border-t border-white/20">
           {groupName && (
-            <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full self-start">
+            <span className="text-xs font-semibold bg-white/20 px-2 py-0.5 rounded-full self-start">
               {groupName}
             </span>
           )}
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`font-medium hover:text-[#f5c518] transition-colors ${
-                pathname === l.href ? 'text-[#f5c518]' : ''
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+          {navLinks}
           <div className="border-t border-white/20 pt-4 flex flex-col gap-4">
-            {user ? (
-              <>
-                <Link href="/dashboard" className="hover:text-[#f5c518] transition-colors">
-                  My Brackets
-                </Link>
-                {isGlobalMod && (
-                  <Link href="/mod" className={`hover:text-[#f5c518] transition-colors ${pathname === '/mod' ? 'text-[#f5c518]' : ''}`}>
-                    Mod
-                  </Link>
-                )}
-                {isAdmin && (
-                  <Link href="/admin" className={`hover:text-[#f5c518] transition-colors ${pathname === '/admin' ? 'text-[#f5c518]' : ''}`}>
-                    Admin
-                  </Link>
-                )}
-                <button onClick={signOut} className="text-left hover:text-[#f5c518] transition-colors">
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="hover:text-[#f5c518] transition-colors">
-                  Log in
-                </Link>
-                <Link
-                  href="/signup"
-                  className="bg-[#f5c518] text-black font-semibold px-4 py-2 rounded text-center hover:bg-yellow-300 transition-colors"
-                >
-                  Join the pool
-                </Link>
-              </>
-            )}
+            {authActions}
           </div>
         </div>
       )}

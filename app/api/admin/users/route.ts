@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
-
-function serviceClient() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { createAdminClient } from '@/lib/supabase/admin'
 
 async function assertAdmin() {
   const supabase = await createClient()
@@ -19,7 +12,7 @@ async function assertAdmin() {
 
 export async function GET() {
   if (!await assertAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const { data, error } = await serviceClient()
+  const { data, error } = await createAdminClient()
     .from('profiles')
     .select(`
       id, display_name, is_admin, is_global_mod, created_at,
@@ -36,7 +29,7 @@ export async function PATCH(req: NextRequest) {
   const updates: Record<string, boolean> = {}
   if (is_admin !== undefined) updates.is_admin = is_admin
   if (is_global_mod !== undefined) updates.is_global_mod = is_global_mod
-  const { error } = await serviceClient().from('profiles').update(updates).eq('id', id)
+  const { error } = await createAdminClient().from('profiles').update(updates).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
@@ -46,7 +39,7 @@ export async function DELETE(req: NextRequest) {
   if (!caller) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const { id } = await req.json()
   if (id === caller.id) return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
-  const { error } = await serviceClient().auth.admin.deleteUser(id)
+  const { error } = await createAdminClient().auth.admin.deleteUser(id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

@@ -30,6 +30,7 @@ All core features are built and wired to live Supabase data:
 
 - **Admin portal — users section** — group users by their group (collapsible per group, ungrouped users in their own section)
 - **Schedule page redesign** — two tabs (Group Stage / Knockouts), card layout with flags + local times; reference `images/UI inspiration/`
+- improve mobile bracket editor layout
 - **Git initial commit** — `git add -A && git commit -m "Initial commit — Mundialito 2026 MVP"` (`.env.local` is gitignored ✓)
 - **Netlify deploy** — push to GitHub → netlify.com → import project; build auto-detected from `netlify.toml`; add all env vars; add Netlify URL to Supabase Auth redirect URLs
 

@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/require-admin'
+import { requireAdmin } from '@/lib/require-role'
 import { createClient } from '@/lib/supabase/server'
 import AdminClient from './admin-client'
 

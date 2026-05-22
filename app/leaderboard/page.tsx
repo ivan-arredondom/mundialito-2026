@@ -3,13 +3,26 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
+type RawBracket = {
+  id: string
+  name: string
+  user_id: string
+  created_at: string
+  profiles: { display_name: string } | null
+  bracket_scores: { points: number }[] | null
+}
+
+type RawMember = {
+  user_id: string
+  profiles: { display_name: string } | null
+}
+
 export default async function LeaderboardPage() {
   const supabase = await createClient()
   const admin = createAdminClient()
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Determine group context
   let groupId: number | null = null
   let groupName: string | null = null
   let noSubmissionUsers: string[] = []
@@ -26,50 +39,26 @@ export default async function LeaderboardPage() {
     }
   }
 
-  // Fetch all brackets (scoped to group if applicable), bypassing RLS
-  type RawBracket = {
-    id: string
-    name: string
-    user_id: string
-    created_at: string
-    profiles: { display_name: string } | null
-    bracket_scores: { points: number }[] | null
+  let members: RawMember[] = []
+
+  if (groupId) {
+    const { data } = await admin
+      .from('group_memberships')
+      .select('user_id, profiles(display_name)')
+      .eq('group_id', groupId)
+    members = (data ?? []) as unknown as RawMember[]
   }
 
-  let query = admin
+  const memberIds = members.map(m => m.user_id)
+
+  const baseQuery = admin
     .from('brackets')
     .select('id, name, user_id, created_at, profiles(display_name), bracket_scores(points)')
     .order('created_at', { ascending: true })
 
-  let allMemberIds: string[] = []
-
-  if (groupId) {
-    const { data: members } = await admin
-      .from('group_memberships')
-      .select('user_id, profiles(display_name)')
-      .eq('group_id', groupId)
-
-    allMemberIds = (members ?? []).map(m => m.user_id)
-
-    if (allMemberIds.length > 0) {
-      query = query.in('user_id', allMemberIds) as typeof query
-    }
-
-    // Users with no submissions
-    const { data: bracketsForMembers } = await admin
-      .from('brackets')
-      .select('user_id')
-      .in('user_id', allMemberIds)
-
-    const usersWithBrackets = new Set((bracketsForMembers ?? []).map(b => b.user_id))
-
-    noSubmissionUsers = (members ?? [])
-      .filter(m => !usersWithBrackets.has(m.user_id))
-      .map(m => (m.profiles as unknown as { display_name: string } | null)?.display_name ?? 'Unknown')
-      .sort()
-  }
-
-  const { data: rawBrackets } = await query
+  const { data: rawBrackets } = await (
+    memberIds.length > 0 ? baseQuery.in('user_id', memberIds) : baseQuery
+  )
 
   const brackets = ((rawBrackets ?? []) as unknown as RawBracket[]).map(b => ({
     id: b.id,
@@ -80,30 +69,39 @@ export default async function LeaderboardPage() {
     created_at: b.created_at,
   }))
 
-  brackets.sort((a, b) => b.points - a.points || a.display_name.localeCompare(a.display_name) || a.created_at.localeCompare(b.created_at))
+  brackets.sort((a, b) =>
+    b.points - a.points ||
+    a.display_name.localeCompare(b.display_name) ||
+    a.created_at.localeCompare(b.created_at)
+  )
 
-  // Assign ranks (tied points = same rank)
   const ranked: (typeof brackets[0] & { rank: number })[] = []
   for (let i = 0; i < brackets.length; i++) {
-    const rank = (i > 0 && brackets[i].points === brackets[i - 1].points)
+    const rank = i > 0 && brackets[i].points === brackets[i - 1].points
       ? ranked[i - 1].rank
       : i + 1
     ranked.push({ ...brackets[i], rank })
   }
 
+  if (groupId) {
+    const usersWithBrackets = new Set(brackets.map(b => b.user_id))
+    noSubmissionUsers = members
+      .filter(m => !usersWithBrackets.has(m.user_id))
+      .map(m => m.profiles?.display_name ?? 'Unknown')
+      .sort()
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
       <h1 className="text-2xl md:text-3xl font-black mb-1">Leaderboard</h1>
-      {groupName && <p className="text-sm text-gray-500 mb-8">{groupName}</p>}
-      {!groupName && <div className="mb-8" />}
+      <p className="text-sm text-gray-500 mb-8">{groupName ?? ''}</p>
 
       {ranked.length === 0 ? (
         <p className="text-gray-400 text-center py-16">No submissions yet.</p>
       ) : (
         <>
-          {/* Header row */}
           <div className="grid grid-cols-[2rem_1fr_1fr_auto] gap-x-3 px-4 mb-2 text-[10px] uppercase tracking-widest text-gray-400 font-semibold">
-            <span></span>
+            <span />
             <span>Player</span>
             <span>Submission</span>
             <span className="text-right">Pts</span>
@@ -134,7 +132,6 @@ export default async function LeaderboardPage() {
         </>
       )}
 
-      {/* Users with no submissions */}
       {noSubmissionUsers.length > 0 && (
         <div className="mt-10">
           <h2 className="text-xs uppercase tracking-widest font-semibold text-gray-400 mb-3">
