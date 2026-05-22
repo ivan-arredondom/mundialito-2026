@@ -32,29 +32,17 @@ export default function SignupPage() {
       return
     }
 
-    // Validate group code and check capacity
-    const { data: group } = await supabase
-      .from('groups')
-      .select('id, max_members')
-      .eq('code', groupCode.trim())
-      .single()
-
-    if (!group) {
-      setError('Invalid group code. Check with your group admin.')
+    // Validate group code and check capacity (server-side to bypass RLS)
+    const groupRes = await fetch('/api/auth/validate-group', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: groupCode.trim() }),
+    })
+    if (!groupRes.ok) {
+      const { error } = await groupRes.json()
+      setError(error)
       setLoading(false)
       return
-    }
-
-    if (group.max_members !== null) {
-      const { count } = await supabase
-        .from('group_memberships')
-        .select('*', { count: 'exact', head: true })
-        .eq('group_id', group.id)
-      if (count !== null && count >= group.max_members) {
-        setError('This group is full. Contact your admin.')
-        setLoading(false)
-        return
-      }
     }
 
     const { error } = await supabase.auth.signUp({
