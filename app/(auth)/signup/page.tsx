@@ -11,6 +11,7 @@ export default function SignupPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [groupCode, setGroupCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -19,10 +20,35 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
     const supabase = createClient()
+
+    // Check registrations are open
+    const { data: appSettings } = await supabase
+      .from('app_settings')
+      .select('allow_registrations')
+      .single()
+    if (appSettings && !appSettings.allow_registrations) {
+      setError('Registrations are currently closed.')
+      setLoading(false)
+      return
+    }
+
+    // Validate group code before creating account
+    const { data: group } = await supabase
+      .from('groups')
+      .select('id')
+      .eq('code', groupCode.trim())
+      .single()
+
+    if (!group) {
+      setError('Invalid group code. Check with your group admin.')
+      setLoading(false)
+      return
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: name } },
+      options: { data: { display_name: name, group_code: groupCode.trim() } },
     })
     if (error) {
       setError(error.message)
@@ -45,6 +71,7 @@ export default function SignupPage() {
         <Field label="Display name" value={name} onChange={setName} type="text" required />
         <Field label="Email" value={email} onChange={setEmail} type="email" required />
         <PasswordField label="Password" value={password} onChange={setPassword} required />
+        <Field label="Group code" value={groupCode} onChange={setGroupCode} type="text" required />
         {error && <p className="text-red-600 text-sm">{error}</p>}
         <button
           type="submit"

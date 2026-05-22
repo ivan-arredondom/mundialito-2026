@@ -14,13 +14,43 @@ const links = [
 export default function Nav() {
   const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
+  const [groupName, setGroupName] = useState<string | null>(null)
+  const [isPrivileged, setIsPrivileged] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    const { data: sub } = supabase.auth.onAuthStateChange((_, session) =>
+
+    async function loadUser() {
+      const { data } = await supabase.auth.getUser()
+      setUser(data.user)
+      if (data.user) {
+        const [{ data: membership }, { data: profile }] = await Promise.all([
+          supabase
+            .from('group_memberships')
+            .select('groups(name)')
+            .eq('user_id', data.user.id)
+            .single(),
+          supabase
+            .from('profiles')
+            .select('is_admin, is_global_mod')
+            .eq('id', data.user.id)
+            .single(),
+        ])
+        const g = membership?.groups as unknown as { name: string } | null
+        setGroupName(g?.name ?? null)
+        setIsPrivileged(!!(profile?.is_admin || profile?.is_global_mod))
+      } else {
+        setGroupName(null)
+        setIsPrivileged(false)
+      }
+    }
+
+    loadUser()
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
-    )
+      if (!session?.user) { setGroupName(null); setIsPrivileged(false) }
+    })
     return () => sub.subscription.unsubscribe()
   }, [])
 
@@ -36,6 +66,11 @@ export default function Nav() {
         <Link href="/" className="font-bold text-lg tracking-tight shrink-0">
           MUNDIALITO <span className="text-[#f5c518]">2026</span>
         </Link>
+        {groupName && (
+          <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full shrink-0">
+            {groupName}
+          </span>
+        )}
         <div className="flex gap-4 flex-1">
           {links.map((l) => (
             <Link
@@ -55,6 +90,11 @@ export default function Nav() {
               <Link href="/dashboard" className="hover:text-[#f5c518] transition-colors">
                 My Brackets
               </Link>
+              {isPrivileged && (
+                <Link href="/admin" className={`hover:text-[#f5c518] transition-colors ${pathname === '/admin' ? 'text-[#f5c518]' : ''}`}>
+                  Admin
+                </Link>
+              )}
               <button onClick={signOut} className="hover:text-[#f5c518] transition-colors">
                 Sign out
               </button>
