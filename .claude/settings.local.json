@@ -22,7 +22,8 @@
       "Bash(curl -s https://ksozjzzsivsopgnnczay.supabase.co/rest/v1/advancement_predictions?select=count -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtzb3pqenpzaXZzb3Bnbm5jemF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzOTg3OTYsImV4cCI6MjA5NDk3NDc5Nn0.yuzQ-4OLlBKQ-RoMpXqQDPbMhj_810qW6263YT5NAHc' -H 'Prefer: count=exact' -I)",
       "Bash(curl -s https://ksozjzzsivsopgnnczay.supabase.co/rest/v1/leaderboard?select=count -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtzb3pqenpzaXZzb3Bnbm5jemF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzOTg3OTYsImV4cCI6MjA5NDk3NDc5Nn0.yuzQ-4OLlBKQ-RoMpXqQDPbMhj_810qW6263YT5NAHc' -H 'Prefer: count=exact' -I)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
-      "Bash(xargs grep -l \"saving\\\\|Saving\")"
+      "Bash(xargs grep -l \"saving\\\\|Saving\")",
+      "WebSearch"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jesus\\Documents\\GitHub\\mundialito-2026\\app\\brackets"
