@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SaveIndicator from '@/components/save-indicator'
 import { flagSrc } from '@/lib/flags'
@@ -16,6 +16,47 @@ type Match = {
   away_team: Team
 }
 type Prediction = { match_id: number; home_score: number; away_score: number }
+
+function timeUntil(utc: string): string {
+  const diff = new Date(utc).getTime() - Date.now()
+  if (diff <= 0) return 'Started'
+  const m = Math.floor(diff / 60000)
+  if (m < 60) return `in ${m}m`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `in ${h}h ${m % 60}m`
+  const d = Math.floor(h / 24)
+  return `in ${d}d ${h % 24}h`
+}
+
+function KickoffTime({ utc }: { utc: string }) {
+  const [label, setLabel] = useState('')
+  const [until, setUntil] = useState('')
+
+  useEffect(() => {
+    const d = new Date(utc)
+    setLabel(
+      d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+        '\n' +
+        d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    )
+    setUntil(timeUntil(utc))
+    const id = setInterval(() => setUntil(timeUntil(utc)), 60000)
+    return () => clearInterval(id)
+  }, [utc])
+
+  if (!label) {
+    const d = new Date(utc)
+    return <>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}</>
+  }
+  const [date, time] = label.split('\n')
+  return (
+    <>
+      {date}<br />{time}
+      <br />
+      <span className="text-[9px] text-red-400">{until}</span>
+    </>
+  )
+}
 
 export default function GroupPredictions({
   bracketId,
@@ -80,11 +121,8 @@ export default function GroupPredictions({
                 return (
                   <div key={m.id}>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-400 w-14 shrink-0">
-                        {new Date(m.kickoff_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                      <span className="text-[10px] text-gray-400 w-20 shrink-0 leading-tight">
+                        <KickoffTime utc={m.kickoff_at} />
                       </span>
                       <div className="flex-1 text-right min-w-0">
                         <span className="text-xs font-semibold flex items-center justify-end gap-1">

@@ -32,25 +32,24 @@ export async function POST(req: NextRequest) {
 
   const matches = await fetchWC2026Matches()
   let updated = 0
+  let skipped = 0
 
   for (const m of matches) {
     const stage = STAGE_MAP[m.stage]
-    if (!stage) continue
+    if (!stage) { skipped++; continue }
 
     const status = STATUS_MAP[m.status] ?? 'SCHEDULED'
     const homeScore = m.score.fullTime.home
     const awayScore = m.score.fullTime.away
-
-    // Resolve team ids by code
     const homeCode = m.homeTeam.tla
     const awayCode = m.awayTeam.tla
 
-    const { data: homeTeam } = await supabase
-      .from('teams').select('id').eq('code', homeCode).single()
-    const { data: awayTeam } = await supabase
-      .from('teams').select('id').eq('code', awayCode).single()
+    const [{ data: homeTeam }, { data: awayTeam }] = await Promise.all([
+      supabase.from('teams').select('id').eq('code', homeCode).single(),
+      supabase.from('teams').select('id').eq('code', awayCode).single(),
+    ])
 
-    const { error } = await supabase.from('matches').upsert({
+    const payload = {
       external_id: String(m.id),
       stage,
       group_code: m.group ?? null,
@@ -60,10 +59,36 @@ export async function POST(req: NextRequest) {
       home_score: status === 'FINISHED' ? homeScore : null,
       away_score: status === 'FINISHED' ? awayScore : null,
       status,
-    }, { onConflict: 'external_id' })
+    }
 
+    // For group stage: match existing seeded row by team IDs so we update
+    // the placeholder instead of inserting a duplicate.
+    if (stage === 'GROUP' && homeTeam?.id && awayTeam?.id) {
+      const { data: existing } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('home_team_id', homeTeam.id)
+        .eq('away_team_id', awayTeam.id)
+        .eq('stage', 'GROUP')
+        .is('external_id', null)
+        .maybeSingle()
+
+      if (existing) {
+        const { error } = await supabase
+          .from('matches')
+          .update(payload)
+          .eq('id', existing.id)
+        if (!error) updated++
+        continue
+      }
+    }
+
+    // Knockout matches (teams TBD) or group matches already stamped: upsert by external_id
+    const { error } = await supabase
+      .from('matches')
+      .upsert(payload, { onConflict: 'external_id' })
     if (!error) updated++
   }
 
-  return NextResponse.json({ updated })
+  return NextResponse.json({ updated, skipped, total: matches.length })
 }

@@ -61,12 +61,14 @@ export default function BracketEditor({
 
   const groupMatchesForStandings = useMemo(
     () =>
-      groupMatches.map(m => ({
-        id: m.id,
-        group_code: m.group_code,
-        home_team_id: m.home_team.id,
-        away_team_id: m.away_team.id,
-      })),
+      groupMatches
+        .filter(m => m.home_team && m.away_team)
+        .map(m => ({
+          id: m.id,
+          group_code: m.group_code,
+          home_team_id: m.home_team.id,
+          away_team_id: m.away_team.id,
+        })),
     [groupMatches]
   )
 

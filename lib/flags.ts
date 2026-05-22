@@ -1,17 +1,19 @@
 // Maps FIFA 3-letter team codes to ISO 3166-1 alpha-2 codes for flagcdn.com
 const CODE_TO_ISO: Record<string, string> = {
-  USA: 'us', PAN: 'pa', HAI: 'ht', JAM: 'jm',
-  MEX: 'mx', BOL: 'bo', CAN: 'ca', NZL: 'nz',
-  ARG: 'ar', CHI: 'cl', PER: 'pe', AUS: 'au',
-  FRA: 'fr', MAR: 'ma', BEL: 'be', ESP: 'es',
-  BRA: 'br', URU: 'uy', COL: 'co', ECU: 'ec',
-  ENG: 'gb-eng', SER: 'rs', NED: 'nl', ISL: 'is',
-  GER: 'de', JPN: 'jp', KOR: 'kr', SAU: 'sa',
-  POR: 'pt', CZE: 'cz', TUR: 'tr', GRE: 'gr',
-  NGA: 'ng', CIV: 'ci', SEN: 'sn', EGY: 'eg',
-  CRO: 'hr', SVK: 'sk', ROM: 'ro', HUN: 'hu',
-  MEX2: 'mx', QAT: 'qa', IRN: 'ir', IRQ: 'iq',
-  CAM: 'cm', MLI: 'ml', GAB: 'ga', RSA: 'za',
+  // CONCACAF
+  USA: 'us', MEX: 'mx', CAN: 'ca', PAN: 'pa', HAI: 'ht', CUW: 'cw',
+  // CONMEBOL
+  ARG: 'ar', BRA: 'br', URY: 'uy', COL: 'co', ECU: 'ec', PAR: 'py',
+  // UEFA
+  FRA: 'fr', ESP: 'es', ENG: 'gb-eng', GER: 'de', POR: 'pt', NED: 'nl',
+  BEL: 'be', CRO: 'hr', TUR: 'tr', CZE: 'cz', AUT: 'at', NOR: 'no',
+  SUI: 'ch', SWE: 'se', SCO: 'gb-sct', BIH: 'ba',
+  // AFC
+  JPN: 'jp', KOR: 'kr', IRN: 'ir', IRQ: 'iq', KSA: 'sa', QAT: 'qa',
+  AUS: 'au', NZL: 'nz', JOR: 'jo', UZB: 'uz',
+  // CAF
+  MAR: 'ma', SEN: 'sn', EGY: 'eg', CIV: 'ci', RSA: 'za', GHA: 'gh',
+  ALG: 'dz', COD: 'cd', TUN: 'tn', CPV: 'cv',
 }
 
 export function flagSrc(teamCode: string): string | null {

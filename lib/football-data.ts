@@ -27,3 +27,15 @@ export async function fetchWC2026Matches(): Promise<FDMatch[]> {
   const data = await apiFetch('/competitions/WC/matches?season=2026')
   return data.matches as FDMatch[]
 }
+
+export interface FDTeam {
+  id: number
+  tla: string
+  name: string
+  shortName: string
+}
+
+export async function fetchWC2026Teams(): Promise<FDTeam[]> {
+  const data = await apiFetch('/competitions/WC/teams?season=2026')
+  return data.teams as FDTeam[]
+}
