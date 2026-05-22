@@ -212,7 +212,7 @@ function ScoreInput({
       onChange={e => onChange(e.target.value)}
       onBlur={onBlur}
       disabled={disabled}
-      className="w-9 text-center border border-gray-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#cc0000] disabled:bg-gray-50 disabled:text-gray-400"
+      className="w-10 sm:w-9 text-center border border-gray-300 rounded px-1 py-1 sm:py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#cc0000] disabled:bg-gray-50 disabled:text-gray-400"
     />
   )
 }

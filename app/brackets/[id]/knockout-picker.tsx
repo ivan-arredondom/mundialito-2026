@@ -96,14 +96,13 @@ export default function KnockoutPicker({
               isConflict ? 'border-red-500 bg-red-50' : 'border-gray-200'
             }`}
           >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider shrink-0">
                 {match.stage} · #{match.match_number}
               </span>
               {match.kickoff_at && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 text-right">
                   {new Date(match.kickoff_at).toLocaleDateString('en-US', {
-                    weekday: 'short',
                     month: 'short',
                     day: 'numeric',
                   })}
@@ -111,9 +110,9 @@ export default function KnockoutPicker({
               )}
             </div>
 
-            <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4">
               <TeamSlot team={teamA} />
-              <span className="text-sm font-bold text-gray-400">VS</span>
+              <span className="text-xs font-bold text-gray-400 shrink-0">VS</span>
               <TeamSlot team={teamB} />
             </div>
 
@@ -163,7 +162,7 @@ function TeamSlot({
 }) {
   if (!team) {
     return (
-      <div className="flex flex-col items-center gap-0.5 w-20 text-center">
+      <div className="flex flex-col items-center gap-0.5 w-16 sm:w-20 text-center">
         <span className="text-2xl text-red-400">?</span>
         <span className="text-xs font-bold text-gray-400">TBD</span>
       </div>
@@ -171,7 +170,7 @@ function TeamSlot({
   }
   const src = flagSrc(team.code)
   return (
-    <div className="flex flex-col items-center gap-0.5 w-20 text-center">
+    <div className="flex flex-col items-center gap-0.5 w-16 sm:w-20 text-center">
       {src && <img src={src} alt={team.code} className="w-8 h-auto" />}
       <span className="text-xs font-bold text-gray-700">{team.code}</span>
       <span className="text-[10px] text-gray-500 leading-tight">{team.name}</span>
