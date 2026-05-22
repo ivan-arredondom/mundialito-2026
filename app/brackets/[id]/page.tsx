@@ -1,14 +1,14 @@
-import { redirect, notFound } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { isLocked } from '@/lib/lock'
+import { requireGroup } from '@/lib/require-group'
 import BracketEditor from './bracket-editor'
 import type { KnockoutMatch } from '@/lib/standings'
 
 export default async function BracketPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const user = await requireGroup()
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
 
   const { data: bracket } = await supabase
     .from('brackets')

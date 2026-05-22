@@ -1,12 +1,11 @@
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { isLocked } from '@/lib/lock'
+import { requireGroup } from '@/lib/require-group'
 import SubmissionsClient from './submissions-client'
 
 export default async function DashboardPage() {
+  const user = await requireGroup()
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
 
   const [bracketsRes, leaderboardRes] = await Promise.all([
     supabase

@@ -32,10 +32,10 @@ export default function SignupPage() {
       return
     }
 
-    // Validate group code before creating account
+    // Validate group code and check capacity
     const { data: group } = await supabase
       .from('groups')
-      .select('id')
+      .select('id, max_members')
       .eq('code', groupCode.trim())
       .single()
 
@@ -43,6 +43,18 @@ export default function SignupPage() {
       setError('Invalid group code. Check with your group admin.')
       setLoading(false)
       return
+    }
+
+    if (group.max_members !== null) {
+      const { count } = await supabase
+        .from('group_memberships')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_id', group.id)
+      if (count !== null && count >= group.max_members) {
+        setError('This group is full. Contact your admin.')
+        setLoading(false)
+        return
+      }
     }
 
     const { error } = await supabase.auth.signUp({
