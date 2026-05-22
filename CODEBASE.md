@@ -17,17 +17,28 @@ app/
   dashboard/submissions-client.tsx  # Client — YOUR SUBMISSIONS UI (create/delete/list)
   brackets/[id]/page.tsx            # Server shell — loads all bracket data
   brackets/[id]/bracket-editor.tsx  # Client root — tab bar, progress bars, state owner
-  brackets/[id]/group-predictions.tsx  # Group stage grid (flag + score inputs + kickoff countdown)
+  brackets/[id]/group-predictions.tsx  # Group stage grid (flag + score inputs + 0-3 quick-pick buttons)
   brackets/[id]/knockout-picker.tsx    # Knockout per-match cards (flag + pick buttons)
-  schedule/page.tsx                 # Match schedule (NEEDS REDESIGN)
+  schedule/page.tsx                 # Two-tab schedule (Group Stage / Knockouts), flags, local times
   results/page.tsx                  # Finished matches (low priority)
-  leaderboard/page.tsx              # Global leaderboard (NEEDS IMPROVEMENTS)
+  leaderboard/page.tsx              # Group-scoped leaderboard; all members shown; no-submission section
+  admin/page.tsx                    # Server shell — admin-only guard
+  admin/admin-client.tsx            # Admin UI — settings, groups CRUD, users grouped by group
+  mod/page.tsx                      # Server shell — loads groups for current mod
+  mod/mod-client.tsx                # Mod UI — collapsible group cards, member promote/demote/remove
   api/brackets/create/route.ts      # POST — create bracket for authed user
   api/results/sync/route.ts         # POST — football-data.org results ingest (hourly cron)
   api/admin/seed/route.ts           # POST — full reset + re-seed from football-data.org API
+  api/admin/settings/route.ts       # PATCH — update app_settings
+  api/admin/groups/route.ts         # GET/POST/PATCH/DELETE — group management
+  api/admin/members/route.ts        # GET/PATCH/DELETE — group member management (admin only)
+  api/admin/users/route.ts          # GET/PATCH/DELETE — user management (admin only)
+  api/mod/members/route.ts          # GET/PATCH/DELETE — group member management (mod or admin)
 lib/
   supabase/client.ts                # Browser Supabase client
-  supabase/server.ts                # Server Supabase client
+  supabase/server.ts                # Server Supabase client (cookie-based, for server components + API routes)
+  supabase/admin.ts                 # createAdminClient() — service role, bypasses RLS
+  require-role.ts                   # requireAdmin() / requireMod() — server-side auth guards with redirect
   lock.ts                           # POOL_LOCK_AT, isLocked()
   scoring.ts                        # STAGE_POINTS, scoreGroupMatch (JS mirror of SQL)
   football-data.ts                  # fetchWC2026Matches(), fetchWC2026Teams()
@@ -35,7 +46,7 @@ lib/
   standings.ts                      # Pure TS: predictGroupStandings, predictBestThirds, resolveSlot, resolveKnockoutTeams, findConflicts
   flags.ts                          # flagSrc(teamCode) → flagcdn.com URL for all 48 real WC2026 codes
 components/
-  nav.tsx                           # Top nav (auth-aware)
+  nav.tsx                           # Top nav — auth-aware, hamburger on mobile, Mod/Admin links by role
   countdown.tsx                     # Default: big 4-block; CountdownText: compact banner text
   local-time.tsx                    # Timezone-aware time display (safe SSR/hydration pattern)
   save-indicator.tsx                # idle/saving/saved with 2s auto-reset
@@ -45,8 +56,10 @@ supabase/
   migrations/0002_scoring.sql       # Scoring functions + leaderboard view
   migrations/0003_bracket_structure.sql  # match connectivity + knockout_winner_picks
   migrations/0004_scoring_v2.sql    # Rewritten scoring from knockout_winner_picks
+  migrations/0005_groups.sql        # groups + group_memberships tables + handle_new_user trigger update
+  migrations/0007_admin.sql         # is_admin / is_global_mod on profiles + app_settings table
+  migrations/0008_group_settings.sql  # max_brackets_per_user + max_members on groups
   seed/matches.sql                  # Original placeholder fixtures (superseded by /api/admin/seed)
-  seed/bracket_connectivity.sql     # Reference for slot/feed logic (now inlined in seed route)
 netlify/
   functions/sync-results.mts        # Netlify scheduled function — calls /api/results/sync every hour
 netlify.toml                        # Build config (command + @netlify/plugin-nextjs)
@@ -57,16 +70,19 @@ images/UI inspiration/              # group.png, R32.png, R16.png, QF.png, SF.pn
 
 ## Database Schema (live)
 
-- `profiles` — auto-created on signup via trigger, stores `display_name`
+- `profiles` — auto-created on signup via trigger; `display_name`, `is_admin`, `is_global_mod`
 - `teams` — 48 real WC2026 qualified teams; `code` matches football-data.org TLA; `flag_url` unused by UI
 - `matches` — 104 total: 72 GROUP + 32 knockout; `match_number` (1–104), `slot_a/b` (R32 only), `feed_a/b_match_id` (R16+); `external_id` = football-data.org match ID
 - `brackets` — one user can have many named brackets
 - `score_predictions` — per-bracket score pick for each group-stage match
 - `knockout_winner_picks` — per-bracket per-match winner pick for knockout rounds
 - `bracket_scores` — cached point totals; refreshed by DB trigger on result update or pick change
+- `groups` — created by admins; `code` is the invite code users enter at signup
+- `group_memberships` — `(group_id, user_id, role)` where role is `'member'` or `'mod'`; auto-inserted on signup if a valid `group_code` is in user metadata
+- `app_settings` — single-row config: `allow_registrations`, `max_brackets_per_user`
 - `leaderboard` view — ranks all brackets by points
 
-RLS enabled on all sensitive tables; `teams` and `matches` are public read.
+RLS enabled on all sensitive tables; `teams`, `matches`, `groups`, and `app_settings` are public read. `group_memberships` is readable by the member themselves only — use `createAdminClient()` to read other members.
 
 ---
 
@@ -117,7 +133,19 @@ football-data.org TLA codes used throughout the codebase:
 
 ### Next.js 16 specifics
 - `params` is a Promise: `async function Page({ params }: { params: Promise<{ id: string }> })` → `const { id } = await params`
+- Same for `searchParams`: `{ searchParams: Promise<{ tab?: string }> }` → `const { tab } = await searchParams`
 - Read `node_modules/next/dist/docs/` before using unfamiliar APIs
+
+### Admin / Mod authorization pattern
+- **Server components**: use `requireAdmin()` or `requireMod()` from `lib/require-role.ts` — redirects if unauthorized
+- **API routes**: define a local `assertAdmin()` or `assertGroupMod(groupId)` that returns `user | null`; check at the top of each handler
+- **`createAdminClient()`** from `lib/supabase/admin.ts` uses the service role key and bypasses RLS — use for all cross-user data reads/writes in API routes and server components
+- **`requireMod()`** allows: `is_admin`, `is_global_mod`, OR `role: 'mod'` in any group membership
+- **Nav Mod link**: shown when `is_global_mod` OR group membership `role === 'mod'`
+
+### RLS and pre-tournament data access
+- `brackets` are RLS-protected and only publicly readable after the lock date — use `createAdminClient()` on the leaderboard page to read brackets before June 11
+- `group_memberships` is readable only by the member themselves — use `createAdminClient()` in API routes to read other members of a group
 
 ### Supabase FK joins
 - FK joins (e.g. `home_team:teams!matches_home_team_id_fkey(...)`) are inferred as arrays by TypeScript but return single objects at runtime.

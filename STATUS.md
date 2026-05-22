@@ -15,10 +15,12 @@ All core features are built and wired to live Supabase data:
 
 - **Auth** — login, signup, forgot/reset password (all working)
 - **Database** — 48 real WC2026 teams, 104 real fixtures (72 group + 32 knockout) seeded from football-data.org via `/api/admin/seed`
-- **Bracket editor** — group score predictions + knockout winner picks, TBD resolution, conflict detection, auto-save, kickoff countdown per match
+- **Bracket editor** — group score predictions + knockout winner picks, TBD resolution, conflict detection, auto-save, kickoff countdown per match, quick-pick 0–3 buttons on mobile
 - **Dashboard** — create/delete brackets, rank/points/exact stats
-- **Schedule** — all 104 matches with local kickoff times
-- **Leaderboard** — global ranking
+- **Schedule** — all 104 matches with local kickoff times, two tabs (Group Stage / Knockouts), flags
+- **Leaderboard** — group-scoped ranking; all members shown (even with 0 brackets); no-submission section at bottom
+- **Admin panel** — global settings, groups CRUD, user management (admin/global-mod toggles), users grouped by group with collapsible sections
+- **Mod panel** — group member management (promote/demote, remove); global mods see all groups, group mods see their own
 - **Results sync** — `/api/results/sync` (POST, protected by `SYNC_SECRET`); Netlify cron runs every hour
 - **Data reset** — `/api/admin/seed` (POST, same secret) — wipes and re-seeds all teams + matches from API; safe to re-run
 
@@ -28,26 +30,19 @@ All core features are built and wired to live Supabase data:
 
 ### Immediate (in order)
 
-- **Admin portal — users section** — group users by their group (collapsible per group, ungrouped users in their own section)
-- **Schedule page redesign** — two tabs (Group Stage / Knockouts), card layout with flags + local times; reference `images/UI inspiration/`
-- improve mobile bracket editor layout
+- **Admin Global Mod toggle bug** — toggle silently fails (DB not updated); error handling now surfaces the real error on-screen; root cause likely `assertAdmin()` failing in PATCH context. Needs live testing to see the actual error message.
 - **Git initial commit** — `git add -A && git commit -m "Initial commit — Mundialito 2026 MVP"` (`.env.local` is gitignored ✓)
 - **Netlify deploy** — push to GitHub → netlify.com → import project; build auto-detected from `netlify.toml`; add all env vars; add Netlify URL to Supabase Auth redirect URLs
 
-### Recently completed
-- **Mod nav tab** — `/mod` page created; `is_global_mod` users see "Mod" link, `is_admin` users see "Admin" link (split from single `isPrivileged` flag)
-- **Nav privilege badge flicker fix** — profile now re-fetched inside `onAuthStateChange` so links appear immediately after login
-- **Leaderboard** — group members always shown (even with 0 brackets/points); medal icons for top 3; bracket count per user; falls back to global view if not in a group
-- **Mobile responsiveness** — hamburger nav, responsive hero, schedule row layout reworked, dashboard form stacks on mobile, group predictions time column hidden on small screens
-
 ### Backlog
 
-- Payment tracking / paid bracket status (Venmo $50 flow)
+- Payment tracking / paid bracket status (Venmo $50 flow) — `paid` boolean on `group_memberships`; exclude unpaid from prize rankings
 - Prize pool computation (55/30/15% split, 9% fee)
-- EXACT score count on dashboard (needs live match results)
+- Live score sync not possible on free football-data.org tier — results will be manual or hourly batch only
+- Results page (low priority)
 - **Admin portal — remaining subsystem items:**
-  - Group mods [Medium-Hard] — `role` in `group_memberships`; mods set per-user limits, approve paid status
-  - Payment approval gate [Medium-Hard] — `paid` boolean on `group_memberships`; excludes unpaid from prize rankings
+  - Group mods setting per-user limits per-group (currently global only)
+  - Payment approval gate — approve paid status per member
 
 ---
 

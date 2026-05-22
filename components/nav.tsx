@@ -16,7 +16,7 @@ export default function Nav() {
   const [user, setUser] = useState<User | null>(null)
   const [groupName, setGroupName] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [isGlobalMod, setIsGlobalMod] = useState(false)
+  const [isMod, setIsMod] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function Nav() {
       const [{ data: membership }, { data: profile }] = await Promise.all([
         supabase
           .from('group_memberships')
-          .select('groups(name)')
+          .select('role, groups(name)')
           .eq('user_id', userId)
           .single(),
         supabase
@@ -38,7 +38,7 @@ export default function Nav() {
       const g = membership?.groups as unknown as { name: string } | null
       setGroupName(g?.name ?? null)
       setIsAdmin(!!profile?.is_admin)
-      setIsGlobalMod(!!profile?.is_global_mod)
+      setIsMod(!!(profile?.is_global_mod || membership?.role === 'mod'))
     }
 
     async function loadUser() {
@@ -49,7 +49,7 @@ export default function Nav() {
       } else {
         setGroupName(null)
         setIsAdmin(false)
-        setIsGlobalMod(false)
+        setIsMod(false)
       }
     }
 
@@ -63,7 +63,7 @@ export default function Nav() {
       } else {
         setGroupName(null)
         setIsAdmin(false)
-        setIsGlobalMod(false)
+        setIsMod(false)
       }
     })
 
@@ -103,7 +103,7 @@ export default function Nav() {
       <Link href="/dashboard" className="hover:text-[#f5c518] transition-colors">
         My Brackets
       </Link>
-      {isGlobalMod && (
+      {isMod && (
         <Link href="/mod" className={`hover:text-[#f5c518] transition-colors ${pathname === '/mod' ? 'text-[#f5c518]' : ''}`}>
           Mod
         </Link>
