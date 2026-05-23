@@ -141,7 +141,7 @@ export default function AdminClient({
     flash('Group deleted')
   }
 
-  async function patchGroup(id: number, patch: { max_brackets_per_user?: number | null; max_members?: number | null; platform_fee_pct?: number }) {
+  async function patchGroup(id: number, patch: { max_brackets_per_user?: number | null; max_members?: number | null; platform_fee_pct?: number; show_in_global?: boolean }) {
     const res = await fetch('/api/admin/groups', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

@@ -62,7 +62,7 @@ export default async function PrizesPage() {
     )
   }
 
-  const [{ data: groupData }, { data: memberships }, { data: rawBrackets }] = await Promise.all([
+  const [{ data: groupData }, { data: memberships }] = await Promise.all([
     admin.from('groups')
       .select('id, name, entry_fee, fee_per, platform_fee_pct, prize_splits')
       .eq('id', groupId)
@@ -70,10 +70,6 @@ export default async function PrizesPage() {
     admin.from('group_memberships')
       .select('user_id, paid')
       .eq('group_id', groupId),
-    admin.from('brackets')
-      .select('id, name, user_id, profiles(display_name), bracket_scores(points)')
-      .in('user_id', [])  // placeholder — overridden below
-      .order('created_at', { ascending: true }),
   ])
 
   const group = groupData as unknown as Group
@@ -86,13 +82,17 @@ export default async function PrizesPage() {
     .in('user_id', memberIds)
     .order('created_at', { ascending: true })
 
-  // Compute leaderboard for current leaders
-  const entries = ((brackets ?? []) as unknown as RawBracket[]).map(b => ({
-    display_name: b.profiles?.display_name ?? 'Unknown',
-    user_id: b.user_id,
-    bracket_name: b.name,
-    points: b.bracket_scores?.[0]?.points ?? 0,
-  }))
+  const paidUserIds = new Set(members.filter(m => m.paid).map(m => m.user_id))
+
+  // Compute leaderboard for current leaders — paid users only
+  const entries = ((brackets ?? []) as unknown as RawBracket[])
+    .filter(b => paidUserIds.has(b.user_id))
+    .map(b => ({
+      display_name: b.profiles?.display_name ?? 'Unknown',
+      user_id: b.user_id,
+      bracket_name: b.name,
+      points: b.bracket_scores?.[0]?.points ?? 0,
+    }))
   entries.sort((a, b) => b.points - a.points || a.display_name.localeCompare(b.display_name))
 
   // Leaders per place (no ties — just show the top N distinct positions)
@@ -103,9 +103,9 @@ export default async function PrizesPage() {
   }
 
   // Prize pool computation
-  const paidPersonCount = members.filter(m => m.paid).length
+  const paidPersonCount = paidUserIds.size
   const paidBracketCount = ((brackets ?? []) as unknown as RawBracket[])
-    .filter(b => members.find(m => m.user_id === b.user_id && m.paid))
+    .filter(b => paidUserIds.has(b.user_id))
     .length
 
   const entryCount = group.fee_per === 'bracket' ? paidBracketCount : paidPersonCount
