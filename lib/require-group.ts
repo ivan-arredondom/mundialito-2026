@@ -10,7 +10,8 @@ export async function requireGroup() {
     .from('group_memberships')
     .select('group_id')
     .eq('user_id', user.id)
-    .single()
+    .limit(1)
+    .maybeSingle()
 
   if (!data) redirect('/join-group')
   return user
