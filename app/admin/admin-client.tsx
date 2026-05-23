@@ -13,6 +13,7 @@ interface Group {
   max_brackets_per_user: number | null
   max_members: number | null
   platform_fee_pct: number
+  show_in_global: boolean
 }
 
 interface Member {
@@ -264,7 +265,21 @@ export default function AdminClient({
                       {g.code}
                     </span>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        const next = !g.show_in_global
+                        setGroups(gs => gs.map(x => x.id === g.id ? { ...x, show_in_global: next } : x))
+                        patchGroup(g.id, { show_in_global: next })
+                      }}
+                      className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                        g.show_in_global
+                          ? 'bg-green-100 text-green-700 border-green-200'
+                          : 'bg-gray-100 text-gray-400 border-gray-200'
+                      }`}
+                    >
+                      {g.show_in_global ? 'Global ✓' : 'Hidden'}
+                    </button>
                     <button
                       onClick={() => toggleMembers(g.id)}
                       className="text-xs text-blue-500 hover:text-blue-700 font-medium"

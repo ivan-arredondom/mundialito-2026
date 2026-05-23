@@ -116,17 +116,31 @@ export default async function LeaderboardPage({
   } else {
     const [{ data: rawBrackets }, { data: allMemberships }] = await Promise.all([
       admin.from('brackets').select(baseSelect).order('created_at', { ascending: true }),
-      admin.from('group_memberships').select('user_id, groups(name)'),
+      admin.from('group_memberships').select('user_id, groups(name, show_in_global)'),
     ])
 
-    const groupByUser: Record<string, string | null> = Object.fromEntries(
-      (allMemberships ?? []).map(m => [
-        m.user_id,
-        (m.groups as unknown as { name: string } | null)?.name ?? null,
-      ])
+    // Users whose ONLY group memberships are in hidden groups are excluded
+    const userGroupMap: Record<string, { name: string; visible: boolean }[]> = {}
+    for (const m of allMemberships ?? []) {
+      const g = m.groups as unknown as { name: string; show_in_global: boolean } | null
+      if (!userGroupMap[m.user_id]) userGroupMap[m.user_id] = []
+      if (g) userGroupMap[m.user_id].push({ name: g.name, visible: g.show_in_global })
+    }
+
+    const hiddenUserIds = new Set(
+      Object.entries(userGroupMap)
+        .filter(([, groups]) => groups.length > 0 && groups.every(g => !g.visible))
+        .map(([userId]) => userId)
     )
 
-    ranked = buildRanked((rawBrackets ?? []) as unknown as RawBracket[], groupByUser)
+    const groupByUser: Record<string, string | null> = {}
+    for (const [userId, groups] of Object.entries(userGroupMap)) {
+      const visible = groups.find(g => g.visible)
+      groupByUser[userId] = visible?.name ?? groups[0]?.name ?? null
+    }
+
+    const visibleBrackets = (rawBrackets ?? []).filter(b => !hiddenUserIds.has(b.user_id))
+    ranked = buildRanked(visibleBrackets as unknown as RawBracket[], groupByUser)
   }
 
   const showGroupCol = activeTab === 'global'

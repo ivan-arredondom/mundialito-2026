@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   if (!await assertAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const { id, max_brackets_per_user, max_members, platform_fee_pct } = await req.json()
+  const { id, max_brackets_per_user, max_members, platform_fee_pct, show_in_global } = await req.json()
 
   if (max_members != null) {
     const { count } = await createAdminClient()
@@ -48,6 +48,7 @@ export async function PATCH(req: NextRequest) {
   if (max_brackets_per_user !== undefined) updates.max_brackets_per_user = max_brackets_per_user
   if (max_members !== undefined) updates.max_members = max_members
   if (platform_fee_pct !== undefined) updates.platform_fee_pct = platform_fee_pct
+  if (show_in_global !== undefined) updates.show_in_global = show_in_global
 
   const { error } = await createAdminClient().from('groups').update(updates).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
