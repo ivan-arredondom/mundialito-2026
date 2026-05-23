@@ -9,7 +9,7 @@ export default async function AdminPage() {
 
   const [{ data: settings }, { data: groups }] = await Promise.all([
     supabase.from('app_settings').select('*').single(),
-    supabase.from('groups').select('id, name, code, max_brackets_per_user, max_members, platform_fee_pct').order('created_at'),
+    supabase.from('groups').select('id, name, code, max_brackets_per_user, max_members, platform_fee_pct, show_in_global').order('created_at'),
   ])
 
   return (
