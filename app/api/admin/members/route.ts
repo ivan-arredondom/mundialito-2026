@@ -10,6 +10,18 @@ async function assertAdmin() {
   return data?.is_admin ? user : null
 }
 
+export async function POST(req: NextRequest) {
+  const admin = await assertAdmin()
+  if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { group_id } = await req.json()
+  if (!group_id) return NextResponse.json({ error: 'group_id required' }, { status: 400 })
+  const { error } = await createAdminClient()
+    .from('group_memberships')
+    .insert({ group_id, user_id: admin.id, role: 'mod' })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 export async function GET(req: NextRequest) {
   if (!await assertAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const groupId = req.nextUrl.searchParams.get('group_id')

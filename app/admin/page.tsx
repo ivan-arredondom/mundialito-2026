@@ -7,9 +7,10 @@ export default async function AdminPage() {
 
   const supabase = await createClient()
 
-  const [{ data: settings }, { data: groups }] = await Promise.all([
+  const [{ data: settings }, { data: groups }, { data: myMemberships }] = await Promise.all([
     supabase.from('app_settings').select('*').single(),
     supabase.from('groups').select('id, name, code, max_brackets_per_user, max_members, platform_fee_pct, show_in_global').order('created_at'),
+    supabase.from('group_memberships').select('group_id').eq('user_id', user.id),
   ])
 
   return (
@@ -20,6 +21,7 @@ export default async function AdminPage() {
         initialSettings={settings ?? { allow_registrations: true, max_brackets_per_user: 3 }}
         initialGroups={groups ?? []}
         currentUserId={user.id}
+        initialMyGroupIds={(myMemberships ?? []).map(m => m.group_id as number)}
       />
     </div>
   )

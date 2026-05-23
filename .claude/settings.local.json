@@ -62,7 +62,8 @@
       "PowerShell(Copy-Item \"c:\\\\Users\\\\Jesus\\\\Documents\\\\GitHub\\\\mundialito-2026\\\\images\\\\appLogo.png\" \"c:\\\\Users\\\\Jesus\\\\Documents\\\\GitHub\\\\mundialito-2026\\\\public\\\\appLogo.png\")"
     ],
     "additionalDirectories": [
-      "c:\\Users\\Jesus\\Documents\\GitHub\\mundialito-2026\\app\\brackets"
+      "c:\\Users\\Jesus\\Documents\\GitHub\\mundialito-2026\\app\\brackets",
+      "c:\\Users\\Jesus\\.claude\\projects\\c--Users-Jesus-Documents-GitHub-mundialito-2026\\memory"
     ]
   }
 }

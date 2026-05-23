@@ -36,10 +36,12 @@ export default function AdminClient({
   initialSettings,
   initialGroups,
   currentUserId,
+  initialMyGroupIds,
 }: {
   initialSettings: Settings
   initialGroups: Group[]
   currentUserId: string
+  initialMyGroupIds: number[]
 }) {
   const [settings, setSettings] = useState(initialSettings)
   const [groups, setGroups] = useState(initialGroups)
@@ -51,6 +53,7 @@ export default function AdminClient({
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null)
   const [membersByGroup, setMembersByGroup] = useState<Record<number, Member[]>>({})
   const [expandedUserGroups, setExpandedUserGroups] = useState<Set<string>>(new Set())
+  const [myGroupIds, setMyGroupIds] = useState<Set<number>>(new Set(initialMyGroupIds))
 
   useEffect(() => {
     fetch('/api/admin/users').then(r => r.json()).then(setUsers)
@@ -139,6 +142,21 @@ export default function AdminClient({
     setGroups(g => g.filter(x => x.id !== id))
     if (expandedGroup === id) setExpandedGroup(null)
     flash('Group deleted')
+  }
+
+  async function joinGroup(id: number) {
+    const res = await fetch('/api/admin/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ group_id: id }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setMyGroupIds(s => new Set([...s, id]))
+      flash('Joined group')
+    } else {
+      flash(`Error: ${data.error}`)
+    }
   }
 
   async function patchGroup(id: number, patch: { max_brackets_per_user?: number | null; max_members?: number | null; platform_fee_pct?: number; show_in_global?: boolean }) {
@@ -286,6 +304,14 @@ export default function AdminClient({
                     >
                       {expandedGroup === g.id ? 'Hide members' : 'Members'}
                     </button>
+                    {!myGroupIds.has(g.id) && (
+                      <button
+                        onClick={() => joinGroup(g.id)}
+                        className="text-xs text-green-600 hover:text-green-800 font-medium"
+                      >
+                        Join
+                      </button>
+                    )}
                     <button
                       onClick={() => deleteGroup(g.id)}
                       className="text-xs text-red-500 hover:text-red-700"
