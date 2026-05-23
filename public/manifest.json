@@ -1,0 +1,18 @@
+{
+  "name": "Mundialito 2026",
+  "short_name": "Mundialito",
+  "description": "FIFA World Cup 2026 Prediction Pool",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#cc0000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/appLogo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
