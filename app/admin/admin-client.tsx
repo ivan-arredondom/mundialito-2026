@@ -232,6 +232,14 @@ export default function AdminClient({
         </div>
       )}
 
+      {/* Results Sync */}
+      <section>
+        <h2 className="text-lg font-black uppercase tracking-widest text-gray-500 mb-4 border-b pb-2">
+          Results
+        </h2>
+        <SyncButton onFlash={flash} />
+      </section>
+
       {/* Global Settings */}
       <section>
         <h2 className="text-lg font-black uppercase tracking-widest text-gray-500 mb-4 border-b pb-2">
@@ -600,5 +608,34 @@ function UsersByGroup({
         <GroupSection label="Ungrouped" members={ungrouped} />
       )}
     </div>
+  )
+}
+
+function SyncButton({ onFlash }: { onFlash: (msg: string) => void }) {
+  const [syncing, setSyncing] = useState(false)
+
+  async function sync() {
+    setSyncing(true)
+    const res = await fetch('/api/results/sync', { method: 'POST' })
+    const data = await res.json().catch(() => ({}))
+    setSyncing(false)
+    if (res.ok) {
+      onFlash(`Synced — ${data.updated ?? 0} match${data.updated !== 1 ? 'es' : ''} updated`)
+    } else {
+      onFlash(`Sync failed: ${data.error ?? res.status}`)
+    }
+  }
+
+  return (
+    <button
+      onClick={sync}
+      disabled={syncing}
+      className="flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+    >
+      <svg className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M4 4v5h.582M20 20v-5h-.581M4.582 9a8 8 0 0 1 14.9-2.215M19.419 15a8 8 0 0 1-14.9 2.215" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {syncing ? 'Syncing…' : 'Sync Results'}
+    </button>
   )
 }
