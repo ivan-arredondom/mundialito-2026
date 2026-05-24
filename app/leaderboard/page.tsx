@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
+import ShareGroupButton from '@/components/share-group-button'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
@@ -113,18 +114,22 @@ export default async function LeaderboardPage({
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  type MyGroup = { id: number; name: string }
+  type MyGroup = { id: number; name: string; code: string }
   let myGroups: MyGroup[] = []
 
   if (user) {
     const { data: memberships } = await supabase
       .from('group_memberships')
-      .select('group_id, groups(name)')
+      .select('group_id, groups(name, code)')
       .eq('user_id', user.id)
-    myGroups = (memberships ?? []).map(m => ({
-      id: m.group_id as number,
-      name: (m.groups as unknown as { name: string } | null)?.name ?? 'My Group',
-    }))
+    myGroups = (memberships ?? []).map(m => {
+      const g = m.groups as unknown as { name: string; code: string } | null
+      return {
+        id: m.group_id as number,
+        name: g?.name ?? 'My Group',
+        code: g?.code ?? '',
+      }
+    })
   }
 
   const activeTab = (myGroups.length === 0 || tab === 'global') ? 'global' : 'group'
@@ -162,11 +167,11 @@ export default async function LeaderboardPage({
   }
 
   // Group tab — one ranked list per group, stacked
-  type GroupBoard = { groupId: number; groupName: string; ranked: RankedBracket[]; noSubmissionUsers: string[] }
+  type GroupBoard = { groupId: number; groupName: string; groupCode: string; ranked: RankedBracket[]; noSubmissionUsers: string[] }
   let groupBoards: GroupBoard[] = []
   if (activeTab === 'group') {
     groupBoards = await Promise.all(
-      myGroups.map(async ({ id: groupId, name: groupName }) => {
+      myGroups.map(async ({ id: groupId, name: groupName, code: groupCode }) => {
         const { data: memberData } = await admin
           .from('group_memberships')
           .select('user_id, profiles(display_name)')
@@ -187,7 +192,7 @@ export default async function LeaderboardPage({
           .map(m => (m.profiles as unknown as { display_name: string } | null)?.display_name ?? 'Unknown')
           .sort()
 
-        return { groupId, groupName, ranked, noSubmissionUsers }
+        return { groupId, groupName, groupCode, ranked, noSubmissionUsers }
       })
     )
   }
@@ -228,11 +233,12 @@ export default async function LeaderboardPage({
           : <RankedTable ranked={globalRanked} showGroupCol />
       ) : (
         <div className="space-y-10">
-          {groupBoards.map(({ groupId, groupName, ranked, noSubmissionUsers }) => (
+          {groupBoards.map(({ groupId, groupName, groupCode, ranked, noSubmissionUsers }) => (
             <div key={groupId}>
-              {groupBoards.length > 1 && (
-                <h2 className="text-base font-black mb-4 text-gray-700 border-b pb-2">{groupName}</h2>
-              )}
+              <div className="flex items-center justify-between mb-4 border-b pb-2">
+                <h2 className="text-base font-black text-gray-700">{groupName}</h2>
+                <ShareGroupButton groupName={groupName} groupCode={groupCode} />
+              </div>
               <RankedTable ranked={ranked} showGroupCol={false} />
               {noSubmissionUsers.length > 0 && (
                 <div className="mt-6">

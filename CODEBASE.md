@@ -19,26 +19,28 @@ app/
   brackets/[id]/bracket-editor.tsx  # Client root — tab bar, progress bars, state owner
   brackets/[id]/group-predictions.tsx  # Group stage grid (flag + score inputs + 0-3 quick-pick buttons)
   brackets/[id]/knockout-picker.tsx    # Knockout per-match cards (flag + pick buttons)
-  schedule/page.tsx                 # Two-tab schedule (Group Stage / Knockouts), flags, local times
-  results/page.tsx                  # Finished matches (low priority)
-  leaderboard/page.tsx              # Group-scoped leaderboard; all members shown; no-submission section
+  schedule/page.tsx                 # Two-tab schedule (Group Stage / Knockouts), flags, 3-letter codes on mobile
+  leaderboard/page.tsx              # Group tab (stacks multiple groups) + Global tab (show_in_global filtered)
+  prizes/page.tsx                   # Per-group prize pool — stacks multiple groups; paid-only rankings
   admin/page.tsx                    # Server shell — admin-only guard
-  admin/admin-client.tsx            # Admin UI — settings, groups CRUD, users grouped by group
+  admin/admin-client.tsx            # Admin UI — settings, groups CRUD, user management, Join button, Sync Results
   mod/page.tsx                      # Server shell — loads groups for current mod
-  mod/mod-client.tsx                # Mod UI — collapsible group cards, member promote/demote/remove
+  mod/mod-client.tsx                # Mod UI — member manage (paid toggle, role, remove), prize settings editor
   api/brackets/create/route.ts      # POST — create bracket for authed user
   api/results/sync/route.ts         # POST — football-data.org results ingest (hourly cron)
   api/admin/seed/route.ts           # POST — full reset + re-seed from football-data.org API
   api/admin/settings/route.ts       # PATCH — update app_settings
-  api/admin/groups/route.ts         # GET/POST/PATCH/DELETE — group management
-  api/admin/members/route.ts        # GET/PATCH/DELETE — group member management (admin only)
+  api/admin/groups/route.ts         # POST/PATCH/DELETE — group management (platform_fee_pct, show_in_global)
+  api/admin/members/route.ts        # GET/POST/PATCH/DELETE — group member management; POST = admin joins a group
   api/admin/users/route.ts          # GET/PATCH/DELETE — user management (admin only)
   api/mod/members/route.ts          # GET/PATCH/DELETE — group member management (mod or admin)
+  api/mod/group/route.ts            # PATCH — mod updates group prize settings (entry_fee, fee_per, prize_splits)
 lib/
   supabase/client.ts                # Browser Supabase client
   supabase/server.ts                # Server Supabase client (cookie-based, for server components + API routes)
   supabase/admin.ts                 # createAdminClient() — service role, bypasses RLS
   require-role.ts                   # requireAdmin() / requireMod() — server-side auth guards with redirect
+  require-group.ts                  # requireGroup() — redirects to /join-group if not in any group; uses maybeSingle()
   lock.ts                           # POOL_LOCK_AT, isLocked()
   scoring.ts                        # STAGE_POINTS, scoreGroupMatch (JS mirror of SQL)
   football-data.ts                  # fetchWC2026Matches(), fetchWC2026Teams()
@@ -47,10 +49,15 @@ lib/
   flags.ts                          # flagSrc(teamCode) → flagcdn.com URL for all 48 real WC2026 codes
 components/
   nav.tsx                           # Top nav — auth-aware, hamburger on mobile, Mod/Admin links by role
+  bottom-nav.tsx                    # Mobile-only bottom nav (md:hidden) — Schedule/Leaderboard/My Brackets/Prizes + Install button
+  install-guide.tsx                 # Mobile-only "Add to Home Screen" button + bottom sheet (iOS/Android steps)
   countdown.tsx                     # Default: big 4-block; CountdownText: compact banner text
   local-time.tsx                    # Timezone-aware time display (safe SSR/hydration pattern)
   save-indicator.tsx                # idle/saving/saved with 2s auto-reset
   toast.tsx                         # Dismissible red fixed-position banner
+public/
+  manifest.json                     # PWA manifest — standalone display, theme #cc0000, references /appLogo.png
+  appLogo.png                       # App logo (also used as PWA icon)
 supabase/
   migrations/0001_init.sql          # Core schema + RLS
   migrations/0002_scoring.sql       # Scoring functions + leaderboard view
@@ -59,6 +66,9 @@ supabase/
   migrations/0005_groups.sql        # groups + group_memberships tables + handle_new_user trigger update
   migrations/0007_admin.sql         # is_admin / is_global_mod on profiles + app_settings table
   migrations/0008_group_settings.sql  # max_brackets_per_user + max_members on groups
+  migrations/0009_payment.sql       # paid boolean on group_memberships
+  migrations/0010_prizes.sql        # entry_fee, fee_per, platform_fee_pct, prize_splits on groups
+  migrations/0011_group_visibility.sql  # show_in_global boolean on groups
   seed/matches.sql                  # Original placeholder fixtures (superseded by /api/admin/seed)
 netlify/
   functions/sync-results.mts        # Netlify scheduled function — calls /api/results/sync every hour
@@ -77,12 +87,25 @@ images/UI inspiration/              # group.png, R32.png, R16.png, QF.png, SF.pn
 - `score_predictions` — per-bracket score pick for each group-stage match
 - `knockout_winner_picks` — per-bracket per-match winner pick for knockout rounds
 - `bracket_scores` — cached point totals; refreshed by DB trigger on result update or pick change
-- `groups` — created by admins; `code` is the invite code users enter at signup
-- `group_memberships` — `(group_id, user_id, role)` where role is `'member'` or `'mod'`; auto-inserted on signup if a valid `group_code` is in user metadata
+- `groups` — created by admins; `code` is invite code; `entry_fee`, `fee_per`, `platform_fee_pct`, `prize_splits` (JSONB), `show_in_global`, `max_brackets_per_user`, `max_members`
+- `group_memberships` — `(group_id, user_id)` composite PK; `role` is `'member'` or `'mod'`; `paid boolean`; auto-inserted on signup if a valid `group_code` is in user metadata; admin can join multiple groups via admin panel
 - `app_settings` — single-row config: `allow_registrations`, `max_brackets_per_user`
 - `leaderboard` view — ranks all brackets by points
 
 RLS enabled on all sensitive tables; `teams`, `matches`, `groups`, and `app_settings` are public read. `group_memberships` is readable by the member themselves only — use `createAdminClient()` to read other members.
+
+---
+
+## Multi-Group Membership
+
+The DB supports multiple groups per user (composite PK on `group_memberships`). Currently only admins use this — via the Join button in the admin panel (calls `POST /api/admin/members` which inserts the admin as a mod).
+
+Pages that handle multiple memberships:
+- `leaderboard/page.tsx` — fetches all memberships, stacks a leaderboard per group on the group tab
+- `prizes/page.tsx` — fetches all memberships, stacks a prize section per group
+- `require-group.ts` — uses `.maybeSingle()` (not `.single()`) to avoid errors when multiple rows exist
+
+Regular-user multi-group is not yet implemented — signup only supports one group code.
 
 ---
 
@@ -126,6 +149,8 @@ football-data.org TLA codes used throughout the codebase:
 - Protected by `x-sync-secret` header
 - For GROUP matches: finds existing row by home_team_id + away_team_id, updates kickoff_at + scores
 - For knockout matches: upserts by external_id
+- Returns `{ updated, skipped, total }`
+- Manual trigger available via Sync Results button in admin panel
 
 ---
 
