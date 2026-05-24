@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 
 type Props = { groupName: string; groupCode: string }
 
-const SITE = 'https://mundialito.app'
+const SITE = 'https://mundialito-2026.vercel.app'
 
 export default function ShareGroupButton({ groupName, groupCode }: Props) {
   const [open, setOpen] = useState(false)
