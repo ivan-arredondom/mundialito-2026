@@ -35,6 +35,13 @@ app/
   api/admin/users/route.ts          # GET/PATCH/DELETE — user management (admin only)
   api/mod/members/route.ts          # GET/PATCH/DELETE — group member management (mod or admin)
   api/mod/group/route.ts            # PATCH — mod updates group prize settings (entry_fee, fee_per, prize_splits)
+supabase/
+  functions/sync-scores/index.ts    # Edge Function — BSD primary → FD fallback; upserts match_scores + updates matches; deployed with --no-verify-jwt
+  migrations/0012_match_scores.sql  # match_scores table + indexes + Realtime publication
+  vault_setup.sql                   # Reference only — Vault secrets for cron (edge_function_url, supabase_service_role_key already set)
+  cron_setup.sql                    # Reference only — pg_cron jobs already scheduled (June 11–30, July 1–19, every 15 min)
+components/
+  share-group-button.tsx            # Invite pill + bottom sheet/modal; copies code or link; mailto on desktop, navigator.share on mobile
 lib/
   supabase/client.ts                # Browser Supabase client
   supabase/server.ts                # Server Supabase client (cookie-based, for server components + API routes)
@@ -91,6 +98,7 @@ images/UI inspiration/              # group.png, R32.png, R16.png, QF.png, SF.pn
 - `group_memberships` — `(group_id, user_id)` composite PK; `role` is `'member'` or `'mod'`; `paid boolean`; auto-inserted on signup if a valid `group_code` is in user metadata; admin can join multiple groups via admin panel
 - `app_settings` — single-row config: `allow_registrations`, `max_brackets_per_user`
 - `leaderboard` view — ranks all brackets by points
+- `match_scores` — live scoring table written by `sync-scores` edge function; `event_id` PK (`bsd_<id>` or `fd_<id>`); `match_id` nullable FK to `matches.id` (populated when BSD has real team names); Realtime enabled; public read RLS
 
 RLS enabled on all sensitive tables; `teams`, `matches`, `groups`, and `app_settings` are public read. `group_memberships` is readable by the member themselves only — use `createAdminClient()` to read other members.
 

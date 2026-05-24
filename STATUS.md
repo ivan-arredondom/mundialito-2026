@@ -3,6 +3,7 @@
 **Last updated:** 2026-05-23  
 **Stack:** Next.js 16 (App Router) + TypeScript + Tailwind CSS + Supabase (Auth + Postgres)  
 **Supabase:** `https://ksozjzzsivsopgnnczay.supabase.co`  
+**Deployed:** `https://mundialito-2026.vercel.app`  
 **Goal:** FIFA World Cup 2026 score prediction pool for San Diego friends (replicating mundialsd.com).
 
 > For file structure, component specs, and implementation gotchas → see `CODEBASE.md`
@@ -26,6 +27,8 @@ All core features are built and wired to live Supabase data:
 - **Data reset** — `/api/admin/seed` (POST, same secret) — wipes and re-seeds all teams + matches from API; safe to re-run
 - **PWA** — web app manifest, add-to-home-screen guide (iOS + Android), bottom navigation bar on mobile
 - **Multi-group membership** — admin can join multiple groups via admin panel; leaderboard and prizes stack all groups for multi-group users
+- **Share group button** — outline pill on leaderboard group header; bottom sheet (mobile) / centered modal (desktop); copies invite code or link (`/signup?code=`); signup page prefills `?code=` from URL
+- **Live scoring** — `match_scores` table fed by `sync-scores` Supabase Edge Function; BSD API primary (league 27, season 188), football-data.org fallback; pg_cron fires every 15 min June 11–July 19 only; schedule page overlays live scores (period, minute, halftime) from `match_scores` when `match_id` is linked
 
 ---
 
@@ -37,13 +40,16 @@ Run these in Supabase SQL editor if not already done:
 - `0010_prizes.sql` — adds `entry_fee`, `fee_per`, `platform_fee_pct`, `prize_splits` to `groups`
 - `0011_group_visibility.sql` — adds `show_in_global boolean` to `groups`
 
+Already applied:
+- `0012_match_scores.sql` ✓ — live scores table, Realtime enabled
+
 ---
 
 ## What's Next
 
 ### Immediate (in order)
 
-- **Netlify deploy** — push to GitHub → netlify.com → import project; build auto-detected from `netlify.toml`; add all env vars; add Netlify URL to Supabase Auth redirect URLs
+- **Pending migrations** — run `0009`, `0010`, `0011` in Supabase SQL editor if not done yet
 
 ### Backlog
 
