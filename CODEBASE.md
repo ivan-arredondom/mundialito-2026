@@ -162,6 +162,15 @@ football-data.org TLA codes used throughout the codebase:
 
 ---
 
+## Live Scoring
+
+- **BSD API** — primary source; league `27`, season `188`; `/events/live/` for in-progress + `/events/?league_id=27` (paginated) for full schedule; normalized to `match_scores`
+- **football-data.org** — fallback if BSD throws; same route as existing sync
+- **`match_id` resolution** — edge function matches BSD event to `matches` row by `event_date` day + lowercased home team name; skips placeholder names (`W101`, `L102`); currently 64/104 linked
+- **Schedule page** — fetches `match_scores` in parallel with `matches`; overlays live status, score, period, and minute when `match_id` is linked; falls back to `matches` data silently when not linked
+- **`tsconfig.json`** — `supabase/functions` excluded from Next.js type-checking (Deno-only code)
+- **`useSearchParams` in signup** — wrapped in `<Suspense>` (required by Next.js for static prerendering)
+
 ## Implementation Notes
 
 ### Next.js 16 specifics
