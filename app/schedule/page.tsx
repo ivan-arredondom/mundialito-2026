@@ -14,6 +14,16 @@ const STAGE_LABELS: Record<string, string> = {
 
 const KO_STAGES = ['R32', 'R16', 'QF', 'SF', 'THIRD', 'FINAL']
 
+interface LiveOverlay {
+  status: string
+  home_score: number | null
+  away_score: number | null
+  home_score_ht: number | null
+  away_score_ht: number | null
+  period: string | null
+  current_minute: number | null
+}
+
 interface MatchRow {
   id: number
   stage: string
@@ -25,6 +35,7 @@ interface MatchRow {
   away_score: number | null
   home_team: { code: string; name: string } | null
   away_team: { code: string; name: string } | null
+  live: LiveOverlay | null
 }
 
 export default async function SchedulePage({
@@ -36,22 +47,60 @@ export default async function SchedulePage({
   const activeTab = tab === 'knockout' ? 'knockout' : 'group'
 
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('matches')
-    .select(`
-      id, stage, group_code, match_number, kickoff_at, status, home_score, away_score,
-      home_team:teams!matches_home_team_id_fkey(code, name),
-      away_team:teams!matches_away_team_id_fkey(code, name)
-    `)
-    .order('match_number', { ascending: true })
 
-  const matches = (data ?? []) as unknown as MatchRow[]
+  const [{ data: matchesData }, { data: liveData }] = await Promise.all([
+    supabase
+      .from('matches')
+      .select(`
+        id, stage, group_code, match_number, kickoff_at, status, home_score, away_score,
+        home_team:teams!matches_home_team_id_fkey(code, name),
+        away_team:teams!matches_away_team_id_fkey(code, name)
+      `)
+      .order('match_number', { ascending: true }),
+    supabase
+      .from('match_scores')
+      .select('match_id, status, home_score, away_score, home_score_ht, away_score_ht, period, current_minute')
+      .not('match_id', 'is', null),
+  ])
+
+  // Build a lookup: matches.id → LiveOverlay
+  const liveMap = new Map<number, LiveOverlay>(
+    (liveData ?? []).map(ls => [
+      ls.match_id as number,
+      {
+        status: ls.status,
+        home_score: ls.home_score,
+        away_score: ls.away_score,
+        home_score_ht: ls.home_score_ht,
+        away_score_ht: ls.away_score_ht,
+        period: ls.period,
+        current_minute: ls.current_minute,
+      },
+    ])
+  )
+
+  const matches = (matchesData ?? []).map(m => ({
+    ...(m as unknown as Omit<MatchRow, 'live'>),
+    live: liveMap.get(m.id) ?? null,
+  })) as MatchRow[]
+
   const groupMatches = matches.filter(m => m.stage === 'GROUP')
   const knockoutMatches = matches.filter(m => m.stage !== 'GROUP')
 
+  // Show live indicator in tab label when any match is IN_PLAY
+  const anyLive = matches.some(m => (m.live?.status ?? m.status) === 'IN_PLAY')
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-2xl md:text-3xl font-black mb-6">Schedule</h1>
+      <h1 className="text-2xl md:text-3xl font-black mb-6">
+        Schedule
+        {anyLive && (
+          <span className="ml-3 inline-flex items-center gap-1.5 text-sm font-semibold text-green-600">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            Live
+          </span>
+        )}
+      </h1>
 
       {/* Tabs */}
       <div className="flex gap-6 mb-8 border-b border-gray-200">
@@ -87,7 +136,26 @@ export default async function SchedulePage({
   )
 }
 
-// ─── Group Stage ────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function effectiveStatus(m: MatchRow) {
+  return m.live?.status ?? m.status
+}
+
+function effectiveScores(m: MatchRow) {
+  if (m.live) return { home: m.live.home_score, away: m.live.away_score }
+  return { home: m.home_score, away: m.away_score }
+}
+
+// "45'" or "HT" or "2H 67'" etc.
+function matchClock(live: LiveOverlay): string {
+  if (live.period === 'HT') return 'HT'
+  if (live.period === 'FT' || live.period === '2ET') return ''
+  if (live.current_minute != null) return `${live.current_minute}'`
+  return ''
+}
+
+// ─── Group Stage ──────────────────────────────────────────────────────────────
 
 function GroupStage({ matches }: { matches: MatchRow[] }) {
   const grouped = matches.reduce<Record<string, MatchRow[]>>((acc, m) => {
@@ -118,8 +186,12 @@ function GroupStage({ matches }: { matches: MatchRow[] }) {
 }
 
 function GroupMatchRow({ m }: { m: MatchRow }) {
-  const finished = m.status === 'FINISHED'
-  const live = m.status === 'IN_PLAY'
+  const status = effectiveStatus(m)
+  const { home, away } = effectiveScores(m)
+  const finished = status === 'FINISHED'
+  const live = status === 'IN_PLAY'
+  const clock = m.live && live ? matchClock(m.live) : ''
+
   return (
     <div className="px-3 py-2.5">
       <div className="flex items-center gap-2">
@@ -131,12 +203,21 @@ function GroupMatchRow({ m }: { m: MatchRow }) {
           </div>
           {m.home_team && <Flag code={m.home_team.code} size="sm" />}
         </div>
-        {/* Score / vs */}
-        <span className={`shrink-0 w-12 text-center text-xs font-bold ${
-          finished ? 'text-gray-800' : live ? 'text-green-600' : 'text-gray-400'
-        }`}>
-          {finished ? `${m.home_score}–${m.away_score}` : live ? 'LIVE' : 'vs'}
-        </span>
+
+        {/* Score / status */}
+        <div className="shrink-0 w-14 text-center">
+          {finished ? (
+            <span className="text-xs font-bold text-gray-800">{home ?? '–'}–{away ?? '–'}</span>
+          ) : live ? (
+            <div>
+              <span className="text-xs font-bold text-green-600">{home ?? '0'}–{away ?? '0'}</span>
+              {clock && <p className="text-[9px] text-green-500 leading-tight">{clock}</p>}
+            </div>
+          ) : (
+            <span className="text-xs font-bold text-gray-300">vs</span>
+          )}
+        </div>
+
         {/* Away */}
         <div className="flex-1 flex items-center gap-1.5 min-w-0">
           {m.away_team && <Flag code={m.away_team.code} size="sm" />}
@@ -146,14 +227,26 @@ function GroupMatchRow({ m }: { m: MatchRow }) {
           </div>
         </div>
       </div>
-      <p className="text-[10px] text-gray-400 text-center mt-1 leading-tight">
-        <LocalTime utc={m.kickoff_at} />
-      </p>
+
+      <div className="text-[10px] text-gray-400 text-center mt-1 leading-tight flex items-center justify-center gap-2">
+        {live && (
+          <span className="inline-flex items-center gap-1 text-green-600 font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            LIVE
+          </span>
+        )}
+        {!live && <LocalTime utc={m.kickoff_at} />}
+        {finished && m.live?.home_score_ht != null && (
+          <span className="text-gray-300">
+            ({m.live.home_score_ht}–{m.live.away_score_ht} HT)
+          </span>
+        )}
+      </div>
     </div>
   )
 }
 
-// ─── Knockout Stage ──────────────────────────────────────────────────────────
+// ─── Knockout Stage ───────────────────────────────────────────────────────────
 
 function KnockoutStage({ matches }: { matches: MatchRow[] }) {
   const byStage = matches.reduce<Record<string, MatchRow[]>>((acc, m) => {
@@ -182,8 +275,12 @@ function KnockoutStage({ matches }: { matches: MatchRow[] }) {
 }
 
 function KnockoutCard({ m }: { m: MatchRow }) {
-  const finished = m.status === 'FINISHED'
-  const live = m.status === 'IN_PLAY'
+  const status = effectiveStatus(m)
+  const { home, away } = effectiveScores(m)
+  const finished = status === 'FINISHED'
+  const live = status === 'IN_PLAY'
+  const clock = m.live && live ? matchClock(m.live) : ''
+
   return (
     <div className={`border rounded-xl p-4 ${live ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}>
       <div className="flex items-center justify-between mb-4">
@@ -192,28 +289,45 @@ function KnockoutCard({ m }: { m: MatchRow }) {
         </span>
         <div className="flex items-center gap-2">
           {live && (
-            <span className="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">
-              LIVE
+            <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              {clock || 'LIVE'}
             </span>
           )}
           {finished && (
             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">FT</span>
           )}
-          <span className="text-xs text-gray-400">
-            <LocalTime utc={m.kickoff_at} />
-          </span>
+          {!live && (
+            <span className="text-xs text-gray-400">
+              <LocalTime utc={m.kickoff_at} />
+            </span>
+          )}
         </div>
       </div>
 
       <div className="flex items-center gap-3">
         <TeamSlot team={m.home_team} />
         <div className="shrink-0 text-center w-14">
-          {finished
-            ? <span className="text-xl font-black text-gray-800 tabular-nums">
-                {m.home_score}–{m.away_score}
+          {finished ? (
+            <div>
+              <span className="text-xl font-black text-gray-800 tabular-nums">
+                {home ?? '–'}–{away ?? '–'}
               </span>
-            : <span className="text-sm font-bold text-gray-300">vs</span>
-          }
+              {m.live?.home_score_ht != null && (
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {m.live.home_score_ht}–{m.live.away_score_ht} HT
+                </p>
+              )}
+            </div>
+          ) : live ? (
+            <div>
+              <span className="text-xl font-black text-green-600 tabular-nums">
+                {home ?? '0'}–{away ?? '0'}
+              </span>
+            </div>
+          ) : (
+            <span className="text-sm font-bold text-gray-300">vs</span>
+          )}
         </div>
         <TeamSlot team={m.away_team} />
       </div>
