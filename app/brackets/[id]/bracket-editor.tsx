@@ -129,7 +129,7 @@ export default function BracketEditor({
   const showToast = toastMessages.length > 0 && !toastDismissed
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <>
       <StageHeader
         bracketName={bracketName}
         canEdit={canEdit}
@@ -140,7 +140,7 @@ export default function BracketEditor({
         onTabChange={setActiveTab}
       />
 
-      <div className="px-4 py-6">
+      <div className="max-w-5xl mx-auto px-4 py-6">
       {activeTab === 'GROUP' ? (
         <GroupPredictions
           bracketId={bracketId}
@@ -172,6 +172,6 @@ export default function BracketEditor({
         onDismiss={() => setToastDismissed(true)}
       />
       </div>
-    </div>
+    </>
   )
 }
