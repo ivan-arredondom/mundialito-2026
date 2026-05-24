@@ -1,16 +1,14 @@
 'use client'
 import { useState, useMemo, useCallback } from 'react'
-import Link from 'next/link'
-import { CountdownText } from '@/components/countdown'
 import Toast from '@/components/toast'
 import GroupPredictions from './group-predictions'
 import KnockoutPicker from './knockout-picker'
+import StageHeader, { type Tab } from './stage-header'
 import {
   predictGroupStandings,
   predictBestThirds,
   findConflicts,
   type KnockoutMatch,
-  type GroupStanding,
   type ScorePrediction,
 } from '@/lib/standings'
 import { KNOCKOUT_STAGES } from '@/lib/bracket-structure'
@@ -26,9 +24,6 @@ type GroupMatch = {
   home_team: Team
   away_team: Team
 }
-
-const ALL_TABS = ['GROUP', 'R32', 'R16', 'QF', 'SF', '3RD', 'FINAL'] as const
-type Tab = typeof ALL_TABS[number]
 
 export default function BracketEditor({
   bracketName,
@@ -134,42 +129,18 @@ export default function BracketEditor({
   const showToast = toastMessages.length > 0 && !toastDismissed
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
-      <Link
-        href="/dashboard"
-        className="text-xs text-gray-400 hover:text-gray-600 uppercase tracking-widest mb-2 inline-block"
-      >
-        ← All Submissions
-      </Link>
-      <h1 className="text-2xl md:text-3xl font-black mb-4 truncate">{bracketName}</h1>
+    <div className="max-w-5xl mx-auto">
+      <StageHeader
+        bracketName={bracketName}
+        canEdit={canEdit}
+        groupPickCount={groupPickCount}
+        winnerPicks={winnerPicks}
+        knockoutMatches={knockoutMatches}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
-      {canEdit && (
-        <div className="border border-red-300 bg-red-50 rounded-xl px-4 py-2 mb-4 text-sm text-red-600 font-medium">
-          <CountdownText />
-        </div>
-      )}
-
-      <div className="space-y-2 mb-4">
-        <ProgressBar label={`${groupPickCount} / 72 group stage matches`} value={groupPickCount} max={72} />
-        <ProgressBar label={`${koPickCount} / 32 knockout picks`} value={koPickCount} max={32} />
-      </div>
-
-      <div className="flex gap-1 mb-6 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
-        {ALL_TABS.map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all shrink-0 ${
-              activeTab === tab
-                ? 'bg-[#cc0000] text-white border-[#cc0000]'
-                : 'bg-white text-gray-700 border-gray-300 hover:border-[#cc0000]'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
+      <div className="px-4 py-6">
       {activeTab === 'GROUP' ? (
         <GroupPredictions
           bracketId={bracketId}
@@ -177,6 +148,9 @@ export default function BracketEditor({
           initialPredictions={initialScorePreds}
           canEdit={canEdit}
           onPredSaved={onPredSaved}
+          standings={standings}
+          bestThirds={bestThirds}
+          teams={teams}
         />
       ) : (
         <KnockoutPicker
@@ -197,20 +171,6 @@ export default function BracketEditor({
         messages={showToast ? toastMessages : []}
         onDismiss={() => setToastDismissed(true)}
       />
-    </div>
-  )
-}
-
-function ProgressBar({ label, value, max }: { label: string; value: number; max: number }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-xs text-gray-600">{label}</span>
-        <span className="text-xs text-gray-400">{pct}%</span>
-      </div>
-      <div className="bg-gray-200 rounded-full h-1.5">
-        <div className="bg-[#cc0000] h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
     </div>
   )

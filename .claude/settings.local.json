@@ -71,7 +71,8 @@
       "Bash(curl -s -H \"Authorization: Token 20ed6b806cf31f8ac9b9b46825e993ee72187119\" \"https://sports.bzzoiro.com/api/v2/events/?league_id=27&limit=5&offset=243\")",
       "Bash(curl -s -H \"Authorization: Token 20ed6b806cf31f8ac9b9b46825e993ee72187119\" \"https://sports.bzzoiro.com/api/v2/events/live/\")",
       "Bash(npx supabase *)",
-      "Bash(curl -s -X POST \"https://ksozjzzsivsopgnnczay.supabase.co/functions/v1/sync-scores\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtzb3pqenpzaXZzb3Bnbm5jemF5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTM5ODc5NiwiZXhwIjoyMDk0OTc0Nzk2fQ.xcsSqVIy-JFW6Tw-dpqegPa1ppagXAB4NEaFvxFkqHQ\" -H \"Content-Type: application/json\" -d \"{}\")"
+      "Bash(curl -s -X POST \"https://ksozjzzsivsopgnnczay.supabase.co/functions/v1/sync-scores\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtzb3pqenpzaXZzb3Bnbm5jemF5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTM5ODc5NiwiZXhwIjoyMDk0OTc0Nzk2fQ.xcsSqVIy-JFW6Tw-dpqegPa1ppagXAB4NEaFvxFkqHQ\" -H \"Content-Type: application/json\" -d \"{}\")",
+      "Bash(npx next *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jesus\\Documents\\GitHub\\mundialito-2026\\app\\brackets",
